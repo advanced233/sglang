@@ -21,6 +21,8 @@
 
 路径简写：`srt/` 指 `python/sglang/srt/`，`kops/` 指 `python/sglang/kernels/ops/`，`vllm:` 指 vLLM 仓库根目录。
 
+运行环境的配置步骤见 [`env_setup.md`](env_setup.md)。
+
 ## 1. 目标与边界
 
 目标：
