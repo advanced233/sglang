@@ -153,22 +153,33 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
 - **指标**：
   - 容量：启动日志的 `max_total_num_tokens`。
   - 吞吐：`python -m sglang.bench_serving --dataset-name random-ids --random-input-len 4096 --random-output-len 256 --random-range-ratio 1 --max-concurrency N`，记录输出吞吐和 TPOT 中位数。`random` 数据集要下载 ShareGPT，离线时用不了。
-  - 拆分：一次 decode step 的 nsys 记录，按 kernel 拆耗时。
+  - 拆分：16k 上下文、6 个请求的 decode，用 torch profiler 采 5 步，再用仓库自带的 `llm-torch-profiler-analysis` 脚本按 kernel 拆耗时。
 - **验证 3.3**：固定 batch=1、短上下文，只改 `--max-total-tokens`（池子大小），看 `fp4_mx_block16` 的 decode 单步时间是否随池子大小线性增长，而 BF16 不变。
-- **产出**：`benchmark/kv_lowbit/` 下的启动和压测脚本，以及结果表模板。
+- **vLLM 参考**：vLLM 的 BF16 / INT8 / INT4（`TRITON_ATTN`）跑同样的扫描，提前知道 A100 上 Triton 实现能做到多快，作为 M3 的目标。
+- **并发上限 32**：SGLang 在这张卡上默认只给 batch ≤ 32 捕获 decode CUDA graph，更大的 batch 会退回 eager，不可比。所以"最大并发"取 min(32, 容量 ÷ 单请求 token 数)。容量的优势在 16k / 32k 上下文下体现：那里能同时放下的请求数本来就小于 32。
+- **产出**：`benchmark/kv_lowbit/m0_bench.py`（驱动）和 `m0_report.py`（汇总表），执行步骤见 [`phase0_runbook.md`](phase0_runbook.md)。
 
 ### M1 离线误差研究（纯 PyTorch，便宜）
 
-- 用 Qwen3-8B 和 Llama-3.1-8B 跑几条真实 prompt，抓下每层写进 cache 的 K/V（RoPE 之后）。
-- 对比几种量化：FP8 per-tensor（e5m2 和 e4m3 都算，离线误差不受 Triton 限制）、INT8 per-token-head、不带 RHT 的 INT4、带 RHT 的 INT4、`fp4_mx_block16`。
+- 用 Qwen3-8B 和 Llama-3.1-8B 在真实文本窗口上做实验。文本取仓库 `docs/docs` 下的文档，离线可用。
+  - 先 prefill 一段前缀（4k / 16k），把 cache 里的 K/V（RoPE 之后）替换成"量化再反量化"的值。
+  - 再对后面 128 个真实 token 打分。
+- 对比几种量化：FP8 per-tensor（e5m2 和 e4m3 都算，离线误差不受 Triton 限制）、INT8 per-token-head、不带 RHT 的 INT4、带 RHT 的 INT4、`fp4_mx_block16`。参考实现在 `benchmark/kv_lowbit/kvq_ref.py`，INT8 / INT4 的取整、zero-point 和 RHT 都与 vLLM 一致；`fp4_mx_block16` 直接调用 SGLang 自己的量化函数。
+- **两种数值语义都算**，正好对应 M3 第 4 点要做的决定：
+  - `chunk_bf16`：当前 chunk 自己的 K/V 用 BF16，即 SGLang 默认的 extend。
+  - `chunk_q`：当前 chunk 的 K/V 也先量化再读，即 vLLM、SGLang 的确定性模式，以及每一步 decode。
 - 指标：
-  - 每层 attention 输出的相对误差；
-  - 末层 logits 相对 BF16 的 KL。
+  - 偏离度：相对 BF16 的 KL、top-1 一致率；
+  - 质量：真实后续 token 的 NLL 变化；
+  - 每层 K/V 的相对误差；
+  - K/V 的通道 outlier 比（RHT 前后）；
+  - 只量化一层时的 KL（找敏感层）。
 - 要回答的问题：
   1. INT4 不带 RHT 能不能用；
   2. RHT 带来多少收益；
-  3. 有 QK-norm 的 Qwen3 和没有 QK-norm 的 Llama，K 的 outlier 是否不同。
-- 验收：一张表，结论用于 M4 的取舍。不改引擎，任何 GPU 上都能跑。
+  3. 有 QK-norm 的 Qwen3 和没有 QK-norm 的 Llama，K 的 outlier 是否不同；
+  4. 两种语义的差距有多大。
+- 验收：每个模型一张表，结论用于 M3、M4 的取舍。脚本是 `benchmark/kv_lowbit/m1_offline_error.py`，不改引擎。
 
 ### M2 INT8 配方跑通（先不融合）
 
@@ -313,10 +324,9 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
   - 输入 4k / 16k / 32k，输出 256；并发取 1、8、32 和该配置能放下的最大值。
   - 每组跑一次，报告输出吞吐和 TPOT 中位数。
   - 同卡上出现其他进程的运行作废重跑。
-- **温度**：这张 A100-PCIE-40GB 在持续负载下会不会降频，还没有实测。环境冒烟的压测太短，日志里也没有负载期间的温度记录。Wan 项目实测降频的是 A100 80GB PCIe，不是这张卡。
-  - M0 开头先做一次约 10 分钟的满载测试，每秒记录温度、SM 时钟、功耗和降频原因（热降频和功耗上限要分开记）。
-  - 之后每次压测都在后台用同样的方式记录。
-  - 只有满载测试里出现降频，才启用"开跑前等降温、在相近温度下对比"的协议；没有降频就只记录，不等待。
+- **温度**：这张 A100-PCIE-40GB 在持续负载下会不会降频，还没有实测。Wan 项目实测降频的是 A100 80GB PCIe，不是这张卡。
+  - 不单独做满载测试。`m0_bench.py` 在每个服务运行期间每秒记录温度、SM 时钟、功耗和降频原因，每次压测都汇总出最高温度、最低 SM 时钟、热降频占比和功耗上限占比。
+  - 只有这些记录里出现热降频，才启用"开跑前等降温、在相近温度下对比"的协议。
 - **精度**：
   - GSM8K 用 sgl-eval 跑完整的测试集，Qwen3 用非思考模式，采样参数用模型推荐值，所有配置相同，各跑一次。
   - 长上下文：16k / 32k 下的 NIAH，或 RULER 子集。开工时先确认 sgl-eval 有没有长上下文任务；没有的话，按 `prefer-sgl-eval.md` 的例外条款用单独的脚本。
@@ -335,7 +345,7 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
 | INT4 在某些层精度损失大 | M1 先离线量化误差；必要时按层回退到 INT8 或 BF16 |
 | 当前 chunk 用 BF16 导致命中 cache 与否结果不同 | 两种语义都实现，量化对比后再定默认值，并写进文档 |
 | flashinfer BF16 基线比 triton 快很多，"低比特 triton vs 默认 flashinfer"不占优 | 如实报告；结论分成"同后端对比"和"对默认配置对比"两种 |
-| A100 热降频（未实测） | M0 先做满载测试；出现降频才启用第 6 节的温度协议 |
+| A100 热降频（未实测） | 压测时自动记录；记录里出现热降频才启用第 6 节的温度协议 |
 | SGLang 迭代快 | 实验 pin 在 `a1966e1`；提 PR 前再 rebase |
 | 共享的 A100-80G 拿不到 | 主实验只依赖 40G 卡 |
 
