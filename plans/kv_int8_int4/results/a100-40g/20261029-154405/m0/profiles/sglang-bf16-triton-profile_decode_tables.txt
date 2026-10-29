@@ -1,0 +1,25 @@
+Triage View
+Mode: single-trace
+Framework: SGLang
+Input traces: $KVQ_WORK/outputs/m0/20261029-154405/profiles/sglang-bf16-triton-profile/decode/1793260282.1117437/triage-trace-decode-1793260284.633771-TP-0.trace.json.gz
+
+Kernel Table
+##### decode
+| Kernel | Category | GPU time | Share | Launches | Python location (site share) | CPU op |
+| --- | --- | ---: | ---: | ---: | --- | --- |
+| _fwd_kernel | other | 1182.69 ms | 52.0% | 144 | python/sglang/kernels/ops/attention/extend_attention.py:916 extend_attention_fwd | cuLaunchKernelEx |
+| ampere_bf16_s16816gemm_bf16_128x256_ldg8_f2f_stages_64x3_tn | gemm | 718.21 ms | 31.6% | 432 | python/sglang/srt/model_executor/runner_backend_utils/breakable_cuda_graph/breakable_cuda_graph.py:279 replay | cudaGraphLaunch |
+| ampere_bf16_s16816gemm_bf16_256x128_ldg8_f2f_stages_64x3_tn | gemm | 247.80 ms | 10.9% | 144 | python/sglang/srt/model_executor/runner_backend_utils/breakable_cuda_graph/breakable_cuda_graph.py:279 replay | cudaGraphLaunch |
+| void sglang::act_and_mul_kernel<__nv_bfloat16, (sglang::ActivationKind)0, false, false, false, false, false, false> | activation | 31.05 ms | 1.4% | 216 | python/sglang/srt/model_executor/runner_backend_utils/breakable_cuda_graph/breakable_cuda_graph.py:279 replay (site share 99%)<br>python/sglang/srt/model_executor/runner_backend/full_cuda_graph_backend.py:225 replay (site share 1%) | cudaGraphLaunch<br>cudaGraphLaunch |
+| kernel_cutlass_kernel_flashinfernormkernelsfused_add_rmsnormFusedAddRMSNormKernel_object_at__tensorptrbf16gmemalign128oi64409640961_tensorptrbf16gmemalign128oi64409640961_tensorptrbf16gme_0 | gemm | 27.20 ms | 1.2% | 432 | python/sglang/srt/model_executor/runner_backend_utils/breakable_cuda_graph/breakable_cuda_graph.py:279 replay (site share 98%)<br>python/sglang/srt/model_executor/runner_backend/full_cuda_graph_backend.py:225 replay (site share 2%) | cudaGraphLaunch<br>cudaGraphLaunch |
+
+Overlap Opportunity Table
+| Priority | Verdict | Kernel | Python scope | Formal signal | Dep risk | Recommendation |
+| --- | --- | --- | --- | --- | --- | --- |
+| - | - | No rows cleared the 1.0% reporting bar. Use mapping/formal mode for overlap attribution. | - | - | - | - |
+
+Fuse Opportunity Table
+##### decode
+| Pattern | Confidence | Related GPU time | Share | Evidence kernels | Current kernel Python location | Candidate fused Python path | Rationale |
+| --- | --- | ---: | ---: | --- | --- | --- | --- |
+| Fused residual add + RMSNorm | Confirmed | 27.20 ms | 1.2% | kernel_cutlass_kernel_flashinfernormkernelsfused_add_rmsnormFusedAddRMSNormKernel_object_at__tensorptrbf16gmemalign128oi64409640961_tensorptrbf16gmemalign128oi64409640961_tensorptrbf16gme_0 (1.2%) | replay @ python/sglang/srt/model_executor/runner_backend_utils/breakable_cuda_graph/breakable_cuda_graph.py:279<br>replay @ python/sglang/srt/model_executor/runner_backend/full_cuda_graph_backend.py:225 | python/sglang/srt/layers/layernorm.py<br>python/sglang/srt/layers/quantization/modelslim/modelslim.py | `Fused residual add + RMSNorm` is present in this trace (1.2% related GPU time). Residual add plus RMSNorm already has fused implementations across several backends. |

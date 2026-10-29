@@ -1,0 +1,110 @@
+$KVQ_WORK/src/sglang/python/sglang/bench_serving.py:13: FutureWarning: `sglang.bench_serving` is deprecated and will be removed in a future release; use `sglang.benchmark.serving` instead (e.g. `python -m sglang.benchmark.serving`).
+  warnings.warn(
+benchmark_args=Namespace(backend='sglang', base_url=None, host='127.0.0.1', port=44427, ready_check_timeout_sec=60, dataset_name='random-ids', dataset_path='', dataset_offset=0, agentic_max_turns=None, speed_bench_category=None, speed_bench_output_len=512, model='~/codex-work/myproject/CommitKV/models/Qwen3-8B', served_model_name=None, tokenizer=None, num_prompts=12, sharegpt_output_len=None, sharegpt_context_len=None, random_input_len=16384, random_output_len=256, random_range_ratio=1.0, image_count=1, image_resolution='1080p', random_image_count=False, image_format='jpeg', image_content='random', request_rate=inf, use_trace_timestamps=False, max_concurrency=6, output_file='$KVQ_WORK/outputs/m0/20261029-154405/bench/sglang-fp8e5m2-triton.jsonl', output_details=False, goodput=None, print_requests=False, disable_tqdm=True, disable_stream=False, return_logprob=False, top_logprobs_num=0, token_ids_logprob=None, logprob_start_len=-1, return_routed_experts=False, cache_report=False, seed=2606, disable_ignore_eos=False, temperature=0.0, top_p=1.0, extra_request_body=None, apply_chat_template=False, profile=False, plot_throughput=False, profile_activities=['CPU', 'GPU'], profile_start_step=None, profile_steps=None, profile_num_steps=None, profile_by_stage=False, profile_stages=None, profile_output_dir=None, profile_prefix=None, lora_name=None, lora_request_distribution='uniform', lora_zipf_alpha=1.5, prompt_suffix='', pd_separated=False, profile_prefill_url=None, profile_decode_url=None, flush_cache=False, flush_cache_timeout=60.0, warmup_requests=1, tokenize_prompt=True, gsp_num_groups=64, gsp_prompts_per_group=16, gsp_system_prompt_len=2048, gsp_question_len=128, gsp_output_len=256, gsp_range_ratio=1.0, gsp_fast_prepare=False, gsp_send_routing_key=False, gsp_num_turns=1, gsp_ordered=False, gsp_group_distribution='uniform', gsp_zipf_alpha=None, mooncake_slowdown_factor=1.0, mooncake_num_rounds=1, mooncake_workload='conversation', fake_prefill=False, tag=None, header=None, rust_client=False, rust_worker_threads=None)
+Waiting up to 60s for http://127.0.0.1:44427/v1/models to become ready...
+Server ready in 0.0s.
+Namespace(backend='sglang', base_url=None, host='127.0.0.1', port=44427, ready_check_timeout_sec=60, dataset_name='random-ids', dataset_path='', dataset_offset=0, agentic_max_turns=None, speed_bench_category=None, speed_bench_output_len=512, model='~/codex-work/myproject/CommitKV/models/Qwen3-8B', served_model_name=None, tokenizer=None, num_prompts=12, sharegpt_output_len=None, sharegpt_context_len=None, random_input_len=16384, random_output_len=256, random_range_ratio=1.0, image_count=1, image_resolution='1080p', random_image_count=False, image_format='jpeg', image_content='random', request_rate=inf, use_trace_timestamps=False, max_concurrency=6, output_file='$KVQ_WORK/outputs/m0/20261029-154405/bench/sglang-fp8e5m2-triton.jsonl', output_details=False, goodput=None, print_requests=False, disable_tqdm=True, disable_stream=False, return_logprob=False, top_logprobs_num=0, token_ids_logprob=None, logprob_start_len=-1, return_routed_experts=False, cache_report=False, seed=2606, disable_ignore_eos=False, temperature=0.0, top_p=1.0, extra_request_body=None, apply_chat_template=False, profile=False, plot_throughput=False, profile_activities=['CPU', 'GPU'], profile_start_step=None, profile_steps=None, profile_num_steps=None, profile_by_stage=False, profile_stages=None, profile_output_dir=None, profile_prefix=None, lora_name=None, lora_request_distribution='uniform', lora_zipf_alpha=1.5, prompt_suffix='', pd_separated=False, profile_prefill_url=None, profile_decode_url=None, flush_cache=False, flush_cache_timeout=60.0, warmup_requests=1, tokenize_prompt=True, gsp_num_groups=64, gsp_prompts_per_group=16, gsp_system_prompt_len=2048, gsp_question_len=128, gsp_output_len=256, gsp_range_ratio=1.0, gsp_fast_prepare=False, gsp_send_routing_key=False, gsp_num_turns=1, gsp_ordered=False, gsp_group_distribution='uniform', gsp_zipf_alpha=None, mooncake_slowdown_factor=1.0, mooncake_num_rounds=1, mooncake_workload='conversation', fake_prefill=False, tag=None, header=None, rust_client=False, rust_worker_threads=None)
+
+#Input tokens: 196608
+#Output tokens: 3072
+Starting warmup with 1 sequences...
+Warmup completed with 1 sequences. Starting main benchmark run...
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 6         
+Successful requests:                     12        
+Benchmark duration (s):                  35.09     
+Total input tokens:                      196608    
+Total input text tokens:                 196608    
+Total generated tokens:                  3072      
+Total generated tokens (retokenized):    2174      
+Request throughput (req/s):              0.34      
+Input token throughput (tok/s):          5603.69   
+Output token throughput (tok/s):         87.56     
+Peak output token throughput (tok/s):    288.00    
+Peak concurrent requests:                12        
+Total token throughput (tok/s):          5691.25   
+Concurrency:                             5.99      
+----------------End-to-End Latency----------------
+Mean E2E Latency (ms):                   17526.01  
+Median E2E Latency (ms):                 17526.52  
+P90 E2E Latency (ms):                    18636.56  
+P95 E2E Latency (ms):                    18638.47  
+P99 E2E Latency (ms):                    18640.04  
+---------------Time to First Token----------------
+Mean TTFT (ms):                          7422.37   
+Median TTFT (ms):                        7754.25   
+P90 TTFT (ms):                           11088.30  
+P95 TTFT (ms):                           12059.62  
+P99 TTFT (ms):                           13007.87  
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          39.62     
+Median TPOT (ms):                        38.31     
+P90 TPOT (ms):                           61.78     
+P95 TPOT (ms):                           63.33     
+P99 TPOT (ms):                           64.19     
+---------------Inter-Token Latency----------------
+Mean ITL (ms):                           39.66     
+Median ITL (ms):                         21.07     
+P90 ITL (ms):                            21.32     
+P95 ITL (ms):                            21.41     
+P99 ITL (ms):                            21.75     
+Max ITL (ms):                            11060.96  
+==================================================
+$KVQ_WORK/src/sglang/python/sglang/bench_serving.py:13: FutureWarning: `sglang.bench_serving` is deprecated and will be removed in a future release; use `sglang.benchmark.serving` instead (e.g. `python -m sglang.benchmark.serving`).
+  warnings.warn(
+benchmark_args=Namespace(backend='sglang', base_url=None, host='127.0.0.1', port=44427, ready_check_timeout_sec=60, dataset_name='random-ids', dataset_path='', dataset_offset=0, agentic_max_turns=None, speed_bench_category=None, speed_bench_output_len=512, model='~/codex-work/myproject/CommitKV/models/Qwen3-8B', served_model_name=None, tokenizer=None, num_prompts=28, sharegpt_output_len=None, sharegpt_context_len=None, random_input_len=16384, random_output_len=256, random_range_ratio=1.0, image_count=1, image_resolution='1080p', random_image_count=False, image_format='jpeg', image_content='random', request_rate=inf, use_trace_timestamps=False, max_concurrency=14, output_file='$KVQ_WORK/outputs/m0/20261029-154405/bench/sglang-fp8e5m2-triton.jsonl', output_details=False, goodput=None, print_requests=False, disable_tqdm=True, disable_stream=False, return_logprob=False, top_logprobs_num=0, token_ids_logprob=None, logprob_start_len=-1, return_routed_experts=False, cache_report=False, seed=2614, disable_ignore_eos=False, temperature=0.0, top_p=1.0, extra_request_body=None, apply_chat_template=False, profile=False, plot_throughput=False, profile_activities=['CPU', 'GPU'], profile_start_step=None, profile_steps=None, profile_num_steps=None, profile_by_stage=False, profile_stages=None, profile_output_dir=None, profile_prefix=None, lora_name=None, lora_request_distribution='uniform', lora_zipf_alpha=1.5, prompt_suffix='', pd_separated=False, profile_prefill_url=None, profile_decode_url=None, flush_cache=False, flush_cache_timeout=60.0, warmup_requests=1, tokenize_prompt=True, gsp_num_groups=64, gsp_prompts_per_group=16, gsp_system_prompt_len=2048, gsp_question_len=128, gsp_output_len=256, gsp_range_ratio=1.0, gsp_fast_prepare=False, gsp_send_routing_key=False, gsp_num_turns=1, gsp_ordered=False, gsp_group_distribution='uniform', gsp_zipf_alpha=None, mooncake_slowdown_factor=1.0, mooncake_num_rounds=1, mooncake_workload='conversation', fake_prefill=False, tag=None, header=None, rust_client=False, rust_worker_threads=None)
+Waiting up to 60s for http://127.0.0.1:44427/v1/models to become ready...
+Server ready in 0.0s.
+Namespace(backend='sglang', base_url=None, host='127.0.0.1', port=44427, ready_check_timeout_sec=60, dataset_name='random-ids', dataset_path='', dataset_offset=0, agentic_max_turns=None, speed_bench_category=None, speed_bench_output_len=512, model='~/codex-work/myproject/CommitKV/models/Qwen3-8B', served_model_name=None, tokenizer=None, num_prompts=28, sharegpt_output_len=None, sharegpt_context_len=None, random_input_len=16384, random_output_len=256, random_range_ratio=1.0, image_count=1, image_resolution='1080p', random_image_count=False, image_format='jpeg', image_content='random', request_rate=inf, use_trace_timestamps=False, max_concurrency=14, output_file='$KVQ_WORK/outputs/m0/20261029-154405/bench/sglang-fp8e5m2-triton.jsonl', output_details=False, goodput=None, print_requests=False, disable_tqdm=True, disable_stream=False, return_logprob=False, top_logprobs_num=0, token_ids_logprob=None, logprob_start_len=-1, return_routed_experts=False, cache_report=False, seed=2614, disable_ignore_eos=False, temperature=0.0, top_p=1.0, extra_request_body=None, apply_chat_template=False, profile=False, plot_throughput=False, profile_activities=['CPU', 'GPU'], profile_start_step=None, profile_steps=None, profile_num_steps=None, profile_by_stage=False, profile_stages=None, profile_output_dir=None, profile_prefix=None, lora_name=None, lora_request_distribution='uniform', lora_zipf_alpha=1.5, prompt_suffix='', pd_separated=False, profile_prefill_url=None, profile_decode_url=None, flush_cache=False, flush_cache_timeout=60.0, warmup_requests=1, tokenize_prompt=True, gsp_num_groups=64, gsp_prompts_per_group=16, gsp_system_prompt_len=2048, gsp_question_len=128, gsp_output_len=256, gsp_range_ratio=1.0, gsp_fast_prepare=False, gsp_send_routing_key=False, gsp_num_turns=1, gsp_ordered=False, gsp_group_distribution='uniform', gsp_zipf_alpha=None, mooncake_slowdown_factor=1.0, mooncake_num_rounds=1, mooncake_workload='conversation', fake_prefill=False, tag=None, header=None, rust_client=False, rust_worker_threads=None)
+
+#Input tokens: 458752
+#Output tokens: 7168
+Starting warmup with 1 sequences...
+Warmup completed with 1 sequences. Starting main benchmark run...
+
+============ Serving Benchmark Result ============
+Backend:                                 sglang    
+Traffic request rate:                    inf       
+Max request concurrency:                 14        
+Successful requests:                     28        
+Benchmark duration (s):                  77.59     
+Total input tokens:                      458752    
+Total input text tokens:                 458752    
+Total generated tokens:                  7168      
+Total generated tokens (retokenized):    5386      
+Request throughput (req/s):              0.36      
+Input token throughput (tok/s):          5912.71   
+Output token throughput (tok/s):         92.39     
+Peak output token throughput (tok/s):    420.00    
+Peak concurrent requests:                28        
+Total token throughput (tok/s):          6005.09   
+Concurrency:                             13.99     
+----------------End-to-End Latency----------------
+Mean E2E Latency (ms):                   38773.08  
+Median E2E Latency (ms):                 38772.63  
+P90 E2E Latency (ms):                    39990.18  
+P95 E2E Latency (ms):                    39993.86  
+P99 E2E Latency (ms):                    39997.92  
+---------------Time to First Token----------------
+Mean TTFT (ms):                          16410.66  
+Median TTFT (ms):                        16668.03  
+P90 TTFT (ms):                           28787.28  
+P95 TTFT (ms):                           28856.86  
+P99 TTFT (ms):                           30555.42  
+-----Time per Output Token (excl. 1st token)------
+Mean TPOT (ms):                          87.70     
+Median TPOT (ms):                        86.77     
+P90 TPOT (ms):                           141.64    
+P95 TPOT (ms):                           147.66    
+P99 TPOT (ms):                           154.45    
+---------------Inter-Token Latency----------------
+Mean ITL (ms):                           85.17     
+Median ITL (ms):                         34.61     
+P90 ITL (ms):                            34.98     
+P95 ITL (ms):                            35.10     
+P99 ITL (ms):                            35.37     
+Max ITL (ms):                            28941.87  
+==================================================

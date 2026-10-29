@@ -1,0 +1,102 @@
+
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]
+Loading weights:   0%|          | 1/399 [00:00<02:38,  2.51it/s]
+Loading weights:   4%|▍         | 15/399 [00:00<00:10, 37.80it/s]
+Loading weights:   7%|▋         | 27/399 [00:00<00:06, 59.71it/s]
+Loading weights:  10%|▉         | 39/399 [00:00<00:04, 76.03it/s]
+Loading weights:  14%|█▍        | 57/399 [00:00<00:03, 105.21it/s]
+Loading weights:  18%|█▊        | 71/399 [00:00<00:03, 108.08it/s]
+Loading weights:  21%|██        | 84/399 [00:01<00:02, 111.75it/s]
+Loading weights:  25%|██▌       | 100/399 [00:01<00:02, 123.53it/s]
+Loading weights:  29%|██▊       | 114/399 [00:01<00:02, 127.11it/s]
+Loading weights:  32%|███▏      | 128/399 [00:01<00:02, 118.79it/s]
+Loading weights:  36%|███▌      | 144/399 [00:01<00:01, 128.54it/s]
+Loading weights:  40%|███▉      | 158/399 [00:01<00:01, 127.98it/s]
+Loading weights:  43%|████▎     | 172/399 [00:01<00:01, 123.57it/s]
+Loading weights:  47%|████▋     | 188/399 [00:01<00:01, 131.52it/s]
+Loading weights:  51%|█████     | 202/399 [00:01<00:01, 131.54it/s]
+Loading weights:  54%|█████▍    | 216/399 [00:02<00:01, 126.74it/s]
+Loading weights:  59%|█████▉    | 235/399 [00:02<00:01, 131.96it/s]
+Loading weights:  62%|██████▏   | 249/399 [00:02<00:01, 133.45it/s]
+Loading weights:  67%|██████▋   | 268/399 [00:02<00:00, 140.88it/s]
+Loading weights:  71%|███████   | 283/399 [00:02<00:00, 135.35it/s]
+Loading weights:  75%|███████▌  | 301/399 [00:02<00:00, 142.66it/s]
+Loading weights:  79%|███████▉  | 316/399 [00:02<00:00, 137.14it/s]
+Loading weights:  84%|████████▎ | 334/399 [00:02<00:00, 142.11it/s]
+Loading weights:  87%|████████▋ | 349/399 [00:03<00:00, 135.03it/s]
+Loading weights:  92%|█████████▏| 367/399 [00:03<00:00, 140.39it/s]
+Loading weights:  96%|█████████▌| 382/399 [00:03<00:00, 133.93it/s]
+Loading weights: 100%|██████████| 399/399 [00:03<00:00, 119.22it/s]
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (1183139 > 131072). Running this sequence through the model will result in indexing errors
+prefix 4096
+  prefix 4096 sample 0: 17.7s
+  prefix 4096 sample 1: 2.4s
+  prefix 4096 sample 2: 2.5s
+  prefix 4096 sample 3: 1.4s
+  prefix 4096 sample 4: 3.2s
+  prefix 4096 sample 5: 1.4s
+  prefix 4096 sample 6: 1.4s
+  prefix 4096 sample 7: 1.4s
+prefix 16384
+  prefix 16384 sample 0: 4.9s
+[W1029 16:48:05.751055575 CUDACachingAllocator.cpp:3934] memory allocation failed with OOM on device 0 while trying to allocate 33554432 bytes (free: 37289984, total: 42285268992).
+[W1029 16:48:07.584369663 CUDACachingAllocator.cpp:3934] memory allocation failed with OOM on device 0 while trying to allocate 33554432 bytes (free: 20512768, total: 42285268992).
+[W1029 16:48:07.585044971 CUDACachingAllocator.cpp:3934] memory allocation failed with OOM on device 0 while trying to allocate 33554432 bytes (free: 28901376, total: 42285268992).
+Traceback (most recent call last):
+  File "$KVQ_WORK/src/sglang/benchmark/kv_lowbit/m1_offline_error.py", line 352, in <module>
+    main()
+  File "$KVQ_WORK/src/sglang/benchmark/kv_lowbit/m1_offline_error.py", line 323, in main
+    by_scheme, outliers = _run_prefix_len(
+                          ^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/src/sglang/benchmark/kv_lowbit/m1_offline_error.py", line 193, in _run_prefix_len
+    q_logp = _score(model, copy.deepcopy(q_cache), cont)
+                           ^^^^^^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/copy.py", line 162, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/copy.py", line 259, in _reconstruct
+    state = deepcopy(state, memo)
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/copy.py", line 136, in deepcopy
+    y = copier(x, memo)
+        ^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/copy.py", line 221, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+                             ^^^^^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/copy.py", line 136, in deepcopy
+    y = copier(x, memo)
+        ^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/copy.py", line 196, in _deepcopy_list
+    append(deepcopy(a, memo))
+           ^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/copy.py", line 162, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/copy.py", line 259, in _reconstruct
+    state = deepcopy(state, memo)
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/copy.py", line 136, in deepcopy
+    y = copier(x, memo)
+        ^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/copy.py", line 221, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+                             ^^^^^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/copy.py", line 143, in deepcopy
+    y = copier(memo)
+        ^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/site-packages/torch/_tensor.py", line 174, in __deepcopy__
+    new_storage = self._typed_storage()._deepcopy(memo)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/site-packages/torch/storage.py", line 1156, in _deepcopy
+    return self._new_wrapped_storage(copy.deepcopy(self._untyped_storage, memo))
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/copy.py", line 143, in deepcopy
+    y = copier(memo)
+        ^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/site-packages/torch/storage.py", line 250, in __deepcopy__
+    new_storage = self.clone()
+                  ^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/site-packages/torch/storage.py", line 264, in clone
+    return type(self)(self.nbytes(), device=self.device).copy_(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 32.00 MiB. GPU 0 has a total capacity of 39.38 GiB of which 27.56 MiB is free. Including non-PyTorch memory, this process has 39.33 GiB memory in use. Of the allocated memory 37.09 GiB is allocated by PyTorch, and 1.74 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)
