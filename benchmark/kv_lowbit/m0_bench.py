@@ -187,9 +187,9 @@ def _reasons_field(gpu):
 
 
 class Telemetry:
-    """Samples GPU state every second into a CSV while a server is up."""
+    """Samples GPU state into a CSV every interval_ms while it runs."""
 
-    def __init__(self, *, gpu, path):
+    def __init__(self, *, gpu, path, interval_ms=1000):
         self._fields = TELEMETRY_FIELDS.format(reasons=_reasons_field(gpu))
         self._path = path
         self._file = open(path, "w")
@@ -206,8 +206,8 @@ class Telemetry:
                 "--format=csv,noheader,nounits",
                 "-i",
                 str(gpu),
-                "-l",
-                "1",
+                "-lms",
+                str(interval_ms),
             ],
             stdout=self._file,
             stderr=subprocess.DEVNULL,
