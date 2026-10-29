@@ -54,8 +54,9 @@
 
 **源码与分支**
 
-- 仓库是 `advanced233/sglang`，分支 `kv-int8-int4`。源码只由 Claude 修改，agent 不改、不提交、不推送。
-- 本次配置的回报只写在本地（步骤 9），不进仓库：里面有主机名、用户名和路径。
+- 仓库是 `advanced233/sglang`，分支 `kv-int8-int4`。源码只由 Claude 修改，agent 不改源码。
+- agent 只往 `plans/kv_int8_int4/results/a100-40g/<时间戳>/` 下加文件并推送（步骤 10）。这个目录以外的文件、以及别的时间戳目录，都不改、不删。
+- 推送前必须脱敏，推送时不要强推（步骤 10）。
 
 **无人值守执行**：用户不在场，整个流程不需要等确认，从头跑到尾。遇到阻塞时按下表处理，绝不为了绕过阻塞而越过上面的规则：
 
@@ -484,7 +485,7 @@ done
 
 ### 步骤 9：回报
 
-把下面的内容写到 `$KVQ_WORK/env_report.md`，用户回来后展示给他们看。主机名、用户名和路径不要提交到仓库。
+把下面的内容写到 `$KVQ_WORK/env_report.md`，然后按步骤 10 脱敏并推送到仓库。
 
 ```text
 机器：GPU 型号（PCIe/SXM）| 驱动版本，是否 ≥ 580 | 最大 SM/显存时钟、功率上限、当前温度 | 是否有调度器
@@ -501,3 +502,79 @@ vLLM 冒烟：BF16 / INT8 / INT4 三组各自能否启动、KV cache 的 token �
 未完成项和原因
 按第 0 节规则自行做的决定（例如 $KVQ_WORK 的选择、前向兼容、跳过的项、等待 GPU 的情况）
 ```
+
+### 步骤 10：脱敏并推送结果
+
+以后每次实验的结果都按这一步推送。
+
+结果放在 `plans/kv_int8_int4/results/a100-40g/<YYYYMMDD-HHMMSS>/`，时间戳用这次运行开始的时间。目录里放：
+
+| 文件 | 内容 |
+|---|---|
+| `env_report.md` | 步骤 9 的回报 |
+| `logs/` | `$KVQ_WORK/logs/` 下的日志。单个文件超过 5 MB 时，只保留开头和结尾各 2000 行 |
+| `pip_freeze_{sglang,vllm,sgleval}.txt` | 三个环境的 `pip freeze` |
+| `nvidia-smi.txt` | `nvidia-smi -q` 的输出 |
+
+不要放：模型权重、缓存、`.nsys-rep` / `.ncu-rep` 等 profile 文件（需要时另定规则），以及任何超过 50 MB 的文件。
+
+**10.1 整理文件**
+
+```bash
+source "$KVQ_WORK/env.sh"
+cd "$KVQ_WORK/src/sglang"
+git pull --rebase origin kv-int8-int4
+TS=20261029-000000   # 改成这次运行开始的时间，格式 YYYYMMDD-HHMMSS
+DEST="plans/kv_int8_int4/results/a100-40g/$TS"
+mkdir -p "$DEST/logs"
+cp "$KVQ_WORK/env_report.md" "$DEST/"
+for f in "$KVQ_WORK"/logs/*.log; do
+  if [ "$(stat -c %s "$f")" -gt 5000000 ]; then
+    { head -n 2000 "$f"; echo "... [truncated by agent] ..."; tail -n 2000 "$f"; } > "$DEST/logs/$(basename "$f")"
+  else
+    cp "$f" "$DEST/logs/"
+  fi
+done
+for e in sglang vllm sgleval; do "$KVQ_WORK/envs/$e/bin/pip" freeze > "$DEST/pip_freeze_$e.txt"; done
+nvidia-smi -q > "$DEST/nvidia-smi.txt"
+```
+
+**10.2 脱敏**
+
+要去掉的信息：主机名、用户名、本地绝对路径、GPU UUID 和序列号、各种 token。
+
+```bash
+H=$(hostname); HS=$(hostname -s); U=$(whoami)
+find "$DEST" -type f -print0 | xargs -0 sed -i \
+  -e "s#$KVQ_WORK#\$KVQ_WORK#g" \
+  -e "s#$HOME#~#g" \
+  -e "s#$H#<host>#g" -e "s#$HS#<host>#g" \
+  -e 's#GPU-[0-9a-fA-F-]\{36\}#GPU-<uuid>#g' \
+  -e 's#\(Serial Number *: \).*#\1<serial>#' \
+  -e 's#hf_[A-Za-z0-9]\{20,\}#hf_<token>#g' \
+  -e 's#gh[pousr]_[A-Za-z0-9]\{20,\}#gh_<token>#g'
+# 用户名单独替换。如果用户名很短或是常见词（例如 user、data），这一步会误伤正文，就跳过，改为人工检查
+find "$DEST" -type f -print0 | xargs -0 sed -i "s#\b$U\b#<user>#g"
+```
+
+推送前必须检查一遍，有任何输出就停下来手动处理，不要推送：
+
+```bash
+grep -rnI -e "$H" -e "$HS" -e "$HOME" -e "$KVQ_WORK" "$DEST"
+grep -rnIE "hf_[A-Za-z0-9]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|GPU-[0-9a-fA-F]{8}-" "$DEST"
+find "$DEST" -type f -size +50M
+```
+
+**10.3 提交并推送**
+
+```bash
+git add "$DEST"
+git diff --cached --name-only | grep -v "^$DEST/" && echo "STOP: 暂存区里有结果目录以外的文件"
+git commit -m "results: A100-40G $TS"
+git pull --rebase origin kv-int8-int4
+git push origin HEAD:kv-int8-int4
+```
+
+- 用本机已经配置好的 git 身份提交。没有配置时，用 `git -c user.name=... -c user.email=... commit` 临时指定，不改全局配置。
+- 推送冲突时先 `git pull --rebase` 再推，**不要强推**。
+- 推送因为凭据或网络失败时，结果留在本地，在回报里注明，告诉用户。
