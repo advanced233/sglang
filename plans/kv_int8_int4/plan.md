@@ -249,11 +249,19 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
 - **兼容性检查**：仿照 `handle_kv4_compatibility`，要求 prefill / decode 都用 triton，并拒绝 MLA、HiCache、unified memory 等组合。
 - **验收**：
   - 服务能启动；
-  - `max_total_num_tokens` 约为 BF16 的 1.9 倍；
+  - 每 token 每层的 KV 字节数为 2112（BF16 是 4096），即容量约为 BF16 的 1.94 倍；
   - GSM8K 与 BF16 的差在 1 分左右。
 - **测试**：
   - 单测：配方注册的完整性、`compute_cell_size` 的字节数（属于"关键路径记账"类），放进 `test/registered/unit/layers/quantization/test_fp4_kv_cache_quant_method.py`；
   - kernel 测试：写入 kernel 对照 torch 参考的往返误差上界，以及 `loc` 为填充槽时的处理，放在 `test/registered/kernels/ops/kvcache/`。
+
+> **实现状态**（代码已提交，GPU 验证见 [`stage1_runbook.md`](stage1_runbook.md)）：
+> - 写入和整层反量化都是 Triton kernel：`python/sglang/kernels/ops/kvcache/int8_per_token_head.py`。写入的算术与 vLLM 相同（乘以 scale 的倒数、四舍五入远离零、scale 下限 `1e-6`）。
+> - 配方 `Int8PerTokenHeadKVCacheMethod` 和另外两个 FP4 配方放在同一个文件里；访问方式是 prefill / decode 都走 `triton` 的 PLAIN，存储 dtype 为 int8。
+> - 兼容性检查是新的 `handle_int8_kv_cache_compatibility`：只允许 CUDA、MHA、prefill 和 decode 都是 `triton`；拒绝 HiCache、LMCache、unified memory、PD 分离和投机解码。池子的构建入口另外拒绝 MLA、SWA、Mamba 混合、page-major 等非普通 MHA 池子。
+> - 带 checkpoint KV scale 的模型直接报错：Triton 后端读取时还会再乘一次这个 scale。
+> - 与计划的差异：容量不在默认显存比例下验收。非融合读取每次把一整层池子反量化成 BF16，按默认比例分配的池子（约 84 万 token）每层要临时占用约 3.4 GB，放不下。M2 冒烟把池子限制在 10 万 token，只验收字节数和精度；默认比例下的容量放到 M3 验收。
+> - 测试：CPU 单测 2 个（访问规则与存储 dtype、`compute_cell_size` 与实际分配一致），kernel 测试 3 个，池子往返测试 1 个（`test/registered/unit/mem_cache/test_int8_kv_pool.py`）。CPU 单测已在本地通过；kernel 和池子测试在 Triton 解释器下通过（GPU 上待验证）。
 
 ### M3 融合 per-token 反量化（核心）
 
@@ -360,7 +368,7 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
    │
 阶段 0  M0 服务探测、M1 离线误差          已完成（results/a100-40g/20261029-154405）
    │
-阶段 1  M3.0 kernel 诊断（ncu）           A100-40G   ← 一次 GPU 会话
+阶段 1  M3.0 kernel 诊断（ncu）           A100-40G   ← 一次 GPU 会话，见 stage1_runbook.md
         M2 INT8 配方跑通（非融合）                    ← 打通 dtype、配方、池子、写入 kernel
    │
 阶段 2  M3 融合 kernel                   A100-40G   ← 工作量最大，也是项目核心
