@@ -1,0 +1,23 @@
+[CI Test Method] TestCPUFP8KVCacheMethod.test_defaults_to_unit_scales
+.[CI Test Method] TestCPUFP8KVCacheMethod.test_static_scale_quantize_and_store
+.[CI Test Method] TestFP4MXBlock16KVCacheMethod.test_create_buffers_shapes
+.[CI Test Method] TestFP4MXBlock16KVCacheMethod.test_properties
+.[CI Test Method] TestFP4MXBlock16KVCacheMethod.test_quantize_dequantize_roundtrip_cpu
+.[CI Test Method] TestFP4MXBlock16KVQuantizeUtil.test_roundtrip_cpu
+.[CI Test Method] TestKVCacheQuantRegistry.test_factory_unknown_raises
+.[CI Test Method] TestNVFP4KVCacheMethod.test_active_prefill_recipe_controls_auxiliary_memory
+.[CI Test Method] TestNVFP4KVCacheMethod.test_compute_cell_size
+.[CI Test Method] TestNVFP4KVCacheMethod.test_create_buffers_shapes
+.[CI Test Method] TestNVFP4KVCacheMethod.test_native_v_scale_swizzle_reference
+.[CI Test Method] TestNVFP4KVCacheMethod.test_properties
+.[CI Test Method] TestNVFP4KVCacheMethod.test_scales_init
+.[CI Test Method] TestNVFP4KVCacheMethod.test_server_args_backend_selection_uses_resolution_projection
+.[CI Test Method] TestNVFP4KVCacheMethod.test_sm100_scale_loading_converts_calibrated_checkpoint_scales
+.[CI Test Method] TestNVFP4KVCacheMethod.test_sm100_scale_loading_preserves_uncalibrated_fallback
+.[CI Test Method] TestNVFP4KVCacheMethod.test_xqa_recipe_retains_linear_scales
+.
+----------------------------------------------------------------------
+Ran 17 tests in 15.260s
+
+OK
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute

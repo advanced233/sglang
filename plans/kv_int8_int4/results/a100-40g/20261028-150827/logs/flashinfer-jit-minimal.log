@@ -1,0 +1,19 @@
+=== JIT Cache Wheel Install ===
+FlashInfer version: 0.7.0.post1
+CUDA version: 12.9
+Wheel CUDA label: cu129
+Install mode: minimal
+Providers: sm80
+Wheel index: https://flashinfer.ai/whl/cu129
+Requirement: flashinfer-jit-cache==0.7.0.post1+cu129 flashinfer-jit-cache-sm80==0.7.0.post1+cu129
+Command: $KVQ_WORK/envs/vllm/bin/python -m pip install --upgrade --no-deps --index-url https://flashinfer.ai/whl/cu129 flashinfer-jit-cache==0.7.0.post1+cu129 flashinfer-jit-cache-sm80==0.7.0.post1+cu129
+Looking in indexes: https://flashinfer.ai/whl/cu129
+Collecting flashinfer-jit-cache==0.7.0.post1+cu129
+  Using cached flashinfer_jit_cache-0.7.0.post1%2Bcu129-cp39-abi3-manylinux_2_28_x86_64.whl (4.5 kB)
+Collecting flashinfer-jit-cache-sm80==0.7.0.post1+cu129
+  Downloading flashinfer_jit_cache_sm80-0.7.0.post1%2Bcu129-cp39-abi3-manylinux_2_28_x86_64.whl (116.2 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 116.2/116.2 MB 55.7 kB/s  0:29:13
+Installing collected packages: flashinfer-jit-cache-sm80, flashinfer-jit-cache
+
+Successfully installed flashinfer-jit-cache-0.7.0.post1+cu129 flashinfer-jit-cache-sm80-0.7.0.post1+cu129
+✅ flashinfer-jit-cache installed successfully.

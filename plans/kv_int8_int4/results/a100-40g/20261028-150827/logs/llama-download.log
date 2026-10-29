@@ -1,0 +1,7 @@
+Hint: A new version of huggingface_hub (2.3.0) is available! You are using version 1.33.0.
+To update, run: hf update
+Hint: The `hf-cli` skill is not installed. Run `hf skills add -g` to teach your AI agents how to use the `hf` CLI.
+$KVQ_WORK/envs/sglang/lib/python3.12/site-packages/huggingface_hub/cli/download.py:160: UserWarning: Ignoring `--exclude` since filenames have been explicitly set.
+  warnings.warn("Ignoring `--exclude` since filenames have been explicitly set.")
+Error: Access denied. This repository requires approval.
+Hint: set HF_DEBUG=1 as environment variable for full traceback.

@@ -1,0 +1,9 @@
+default ready=0 elapsed=185
+default ready=1 elapsed=240
+{"id":"63b2b3ea301d4930b8b0e1c871eaafa0","object":"chat.completion","created":1793181698,"model":"~/codex-work/myproject/CommitKV/models/Qwen3-8B","choices":[{"index":0,"message":{"role":"assistant","content":"391","reasoning_content":null},"logprobs":null,"finish_reason":"stop","matched_stop":151645}],"usage":{"prompt_tokens":28,"total_tokens":32,"completion_tokens":4,"prompt_tokens_details":null,"reasoning_tokens":0,"completion_tokens_details":null},"metadata":{"weight_version":"default","weight_versions":[{"version":"default","start":0,"end":4}]}}
+triton ready=1 elapsed=55
+{"id":"ee64050f10464643b88e14278aff952d","object":"chat.completion","created":1793181757,"model":"~/codex-work/myproject/CommitKV/models/Qwen3-8B","choices":[{"index":0,"message":{"role":"assistant","content":"391","reasoning_content":null},"logprobs":null,"finish_reason":"stop","matched_stop":151645}],"usage":{"prompt_tokens":28,"total_tokens":32,"completion_tokens":4,"prompt_tokens_details":null,"reasoning_tokens":0,"completion_tokens_details":null},"metadata":{"weight_version":"default","weight_versions":[{"version":"default","start":0,"end":4}]}}
+triton_fp8_e4m3 ready=0 elapsed=50
+triton_fp4_mx_block16 ready=0 elapsed=115
+fp4_retry ready=1 elapsed=110
+{"id":"e1f4499be67c4ec0bebaec0d46a1ecdf","object":"chat.completion","created":1793182065,"model":"~/codex-work/myproject/CommitKV/models/Qwen3-8B","choices":[{"index":0,"message":{"role":"assistant","content":"391","reasoning_content":null},"logprobs":null,"finish_reason":"stop","matched_stop":151645}],"usage":{"prompt_tokens":28,"total_tokens":32,"completion_tokens":4,"prompt_tokens_details":null,"reasoning_tokens":0,"completion_tokens_details":null},"metadata":{"weight_version":"default","weight_versions":[{"version":"default","start":0,"end":4}]}}

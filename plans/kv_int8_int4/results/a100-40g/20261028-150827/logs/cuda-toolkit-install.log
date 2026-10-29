@@ -1,0 +1,17 @@
+Channels:
+ - nvidia
+ - conda-forge
+Platform: linux-64
+Collecting package metadata (repodata.json): ...working... done
+Solving environment: ...working... failed
+
+LibMambaUnsatisfiableError: Encountered problems while solving:
+  - package cuda-cccl-13.0.50-h20faefc_1 requires cuda-version >=13.0,<13.1.0a0, but none of the providers can be installed
+
+Could not solve for environment specs
+The following packages are incompatible
+├─ __cuda ==12.4 0 is requested and can be installed;
+└─ cuda-cccl =13.0 * is not installable because it requires
+   └─ cuda-version >=13.0,<13.1.0a0 *, which requires
+      └─ __cuda >=13 *, which conflicts with any installable versions previously reported.
+

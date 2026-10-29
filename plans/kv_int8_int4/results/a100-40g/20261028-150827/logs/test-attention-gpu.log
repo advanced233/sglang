@@ -1,0 +1,41 @@
+.......s.[W1028 17:50:59.490569842 CUDACachingAllocator.cpp:3934] memory allocation failed with OOM on device 0 while trying to allocate 6706692096 bytes (free: 6515392512, total: 42285268992).
+.ssF..
+======================================================================
+FAIL: test_extend_attention_unified_vs_regular (__main__.TestTritonAttention.test_extend_attention_unified_vs_regular) (B=8, N_CTX=256, H_Q=64, H_KV=8, D=80)
+Test unified kernel matches 2-stage kernel across different configs.
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "$KVQ_WORK/src/sglang/test/registered/attention/test_triton_attention_kernels.py", line 1176, in test_extend_attention_unified_vs_regular
+    self._test_extend_attention_unified_vs_regular_once(
+  File "$KVQ_WORK/src/sglang/test/registered/attention/test_triton_attention_kernels.py", line 1160, in _test_extend_attention_unified_vs_regular_once
+    self.assertTrue(
+AssertionError: False is not true : Unified kernel output differs from 2-stage kernel. Max diff: 0.44921875
+
+----------------------------------------------------------------------
+Ran 15 tests in 69.452s
+
+FAILED (failures=1, skipped=3)
+1.0078125
+1.0078125
+1.0
+1.0
+1.0078125
+0.99609375
+1.0
+1.0
+1.0
+1.0
+1.0
+1.0078125
+1.0
+1.0
+1.0
+1.0
+1.0
+1.0
+1.0
+0.99609375
+1.0
+1.0078125
+1.0
+0.99609375

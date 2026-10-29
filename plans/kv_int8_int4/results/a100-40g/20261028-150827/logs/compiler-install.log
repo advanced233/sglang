@@ -1,0 +1,38 @@
+Channels:
+ - conda-forge
+Platform: linux-64
+Collecting package metadata (repodata.json): ...working... done
+Solving environment: ...working... done
+
+## Package Plan ##
+
+  environment location: $KVQ_WORK/envs/sglang
+
+  added / updated specs:
+    - gxx_linux-64
+
+
+The following packages will be downloaded:
+
+    package                    |            build
+    ---------------------------|-----------------
+    binutils_linux-64-2.46.1   |default_h4852527_103          35 KB  conda-forge
+    gcc_linux-64-16.2.0        |       h0ab548f_2          30 KB  conda-forge
+    gxx_impl_linux-64-16.2.0   |       h0d273dc_7        16.2 MB  conda-forge
+    gxx_linux-64-16.2.0        |       h23aca61_2          28 KB  conda-forge
+    ------------------------------------------------------------
+                                           Total:        16.3 MB
+
+The following NEW packages will be INSTALLED:
+
+  binutils_linux-64  conda-forge/linux-64::binutils_linux-64-2.46.1-default_h4852527_103 
+  gcc_linux-64       conda-forge/linux-64::gcc_linux-64-16.2.0-h0ab548f_2 
+  gxx_impl_linux-64  conda-forge/linux-64::gxx_impl_linux-64-16.2.0-h0d273dc_7 
+  gxx_linux-64       conda-forge/linux-64::gxx_linux-64-16.2.0-h23aca61_2 
+
+
+
+Downloading and Extracting Packages: ...working... done
+Preparing transaction: ...working... done
+Verifying transaction: ...working... done
+Executing transaction: ...working... done

@@ -1,0 +1,5 @@
+Looking in indexes: https://mirrors.aliyun.com/pypi/simple/
+Collecting numpy==2.4.2
+  Downloading numpy-2.4.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (16.6 MB)
+     ━━━━━━━━━━━━━╸                           5.8/16.6 MB 96.2 kB/s eta 0:01:53
+ERROR: Operation cancelled by user

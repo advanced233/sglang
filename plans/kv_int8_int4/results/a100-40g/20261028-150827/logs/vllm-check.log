@@ -1,0 +1,2 @@
+vllm 0.32.0 torch 2.13.0+cu129 cuda 12.9 available True
+['int4_per_token_head', 'int8_per_token_head', 'fp8_per_token_head']

@@ -1,0 +1,50 @@
+Channels:
+ - conda-forge
+Platform: linux-64
+Collecting package metadata (repodata.json): ...working... done
+Solving environment: ...working... done
+
+## Package Plan ##
+
+  environment location: $KVQ_WORK/envs/sglang
+
+  added / updated specs:
+    - rust
+
+
+The following packages will be downloaded:
+
+    package                    |            build
+    ---------------------------|-----------------
+    binutils_impl_linux-64-2.46.1|default_hfdba357_103         3.5 MB  conda-forge
+    gcc_impl_linux-64-16.2.0   |       h9891192_7        82.1 MB  conda-forge
+    kernel-headers_linux-64-4.18.0|       he073ed8_9         1.2 MB  conda-forge
+    libgcc-devel_linux-64-16.2.0|     he3ce08f_107         3.0 MB  conda-forge
+    libsanitizer-16.2.0        |       h3048135_7         7.7 MB  conda-forge
+    libstdcxx-16.2.0           |       h934c35e_7         6.3 MB  conda-forge
+    libstdcxx-devel_linux-64-16.2.0|     h86e191b_107        22.2 MB  conda-forge
+    rust-1.99.1                |       h5387ef0_0       193.4 MB  conda-forge
+    rust-std-x86_64-unknown-linux-gnu-1.99.1|       h480d76f_0        39.2 MB  conda-forge
+    sysroot_linux-64-2.28      |       h4ee821c_9        22.9 MB  conda-forge
+    ------------------------------------------------------------
+                                           Total:       381.6 MB
+
+The following NEW packages will be INSTALLED:
+
+  binutils_impl_lin~ conda-forge/linux-64::binutils_impl_linux-64-2.46.1-default_hfdba357_103 
+  gcc_impl_linux-64  conda-forge/linux-64::gcc_impl_linux-64-16.2.0-h9891192_7 
+  kernel-headers_li~ conda-forge/noarch::kernel-headers_linux-64-4.18.0-he073ed8_9 
+  libgcc-devel_linu~ conda-forge/noarch::libgcc-devel_linux-64-16.2.0-he3ce08f_107 
+  libsanitizer       conda-forge/linux-64::libsanitizer-16.2.0-h3048135_7 
+  libstdcxx          conda-forge/linux-64::libstdcxx-16.2.0-h934c35e_7 
+  libstdcxx-devel_l~ conda-forge/noarch::libstdcxx-devel_linux-64-16.2.0-h86e191b_107 
+  rust               conda-forge/linux-64::rust-1.99.1-h5387ef0_0 
+  rust-std-x86_64-u~ conda-forge/noarch::rust-std-x86_64-unknown-linux-gnu-1.99.1-h480d76f_0 
+  sysroot_linux-64   conda-forge/noarch::sysroot_linux-64-2.28-h4ee821c_9 
+
+
+
+Downloading and Extracting Packages: ...working... done
+Preparing transaction: ...working... done
+Verifying transaction: ...working... done
+Executing transaction: ...working... done

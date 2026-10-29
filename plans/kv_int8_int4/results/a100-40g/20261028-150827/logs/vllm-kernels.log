@@ -1,0 +1,41 @@
+FlashInfer kernels are disabled: flashinfer-cubin is not installed and nvcc (CUDA_HOME, CUDA_PATH, PATH or <local-path>) or ninja (PATH) is missing. Set CUDA_HOME to a CUDA toolkit and put ninja on PATH, or run `vllm download-kernels`.
+(MainProcess pid=3224866) WARNING 10-28 22:17:51 [cuda.py:988] Detected different devices in the system: NVIDIA A100-PCIE-40GB, NVIDIA A100 80GB PCIe, NVIDIA A100 80GB PCIe. Please make sure to set `CUDA_DEVICE_ORDER=PCI_BUS_ID` to avoid unexpected behavior.
+=== Cubin Wheel Install ===
+FlashInfer version: 0.7.0.post1
+Wheel index: https://flashinfer.ai/whl
+Requirement: flashinfer-cubin==0.7.0.post1
+Command: $KVQ_WORK/envs/vllm/bin/python -m pip install --upgrade --no-deps --index-url https://flashinfer.ai/whl flashinfer-cubin==0.7.0.post1
+Looking in indexes: https://flashinfer.ai/whl
+Collecting flashinfer-cubin==0.7.0.post1
+  Downloading flashinfer_cubin-0.7.0.post1-py3-none-any.whl (1567.1 MB)
+     ━━━╸                                     0.1/1.6 GB 77.2 kB/s eta 5:06:09
+ERROR: Operation cancelled by user
+
+Aborted!
+Traceback (most recent call last):
+  File "$KVQ_WORK/envs/vllm/bin/vllm", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "$KVQ_WORK/envs/vllm/lib/python3.12/site-packages/vllm/entrypoints/cli/main.py", line 120, in main
+    args.dispatch_function(args)
+  File "$KVQ_WORK/envs/vllm/lib/python3.12/site-packages/vllm/entrypoints/cli/download_kernels.py", line 68, in cmd
+    sys.exit(_download_flashinfer_kernels(args.dry_run))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/vllm/lib/python3.12/site-packages/vllm/entrypoints/cli/download_kernels.py", line 49, in _download_flashinfer_kernels
+    return subprocess.run(cmd, env=env, check=False).returncode
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/vllm/lib/python3.12/subprocess.py", line 550, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/vllm/lib/python3.12/subprocess.py", line 1201, in communicate
+    self.wait()
+  File "$KVQ_WORK/envs/vllm/lib/python3.12/subprocess.py", line 1264, in wait
+    return self._wait(timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/vllm/lib/python3.12/subprocess.py", line 2053, in _wait
+    (pid, sts) = self._try_wait(0)
+                 ^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/vllm/lib/python3.12/subprocess.py", line 2011, in _try_wait
+    (pid, sts) = os.waitpid(self.pid, wait_flags)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

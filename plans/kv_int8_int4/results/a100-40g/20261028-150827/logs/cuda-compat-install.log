@@ -1,0 +1,80 @@
+Channels:
+ - conda-forge
+Platform: linux-64
+Collecting package metadata (repodata.json): ...working... done
+Solving environment: ...working... done
+
+## Package Plan ##
+
+  environment location: $KVQ_WORK/envs/sglang
+
+  added / updated specs:
+    - cuda-compat=13.0
+
+
+The following packages will be downloaded:
+
+    package                    |            build
+    ---------------------------|-----------------
+    cuda-compat-13.0.2         |       ha770c72_0          15 KB  conda-forge
+    cuda-compat-impl-580.95.05 |       h676940d_0        40.8 MB  conda-forge
+    ------------------------------------------------------------
+                                           Total:        40.8 MB
+
+The following NEW packages will be INSTALLED:
+
+  cuda-compat        conda-forge/linux-64::cuda-compat-13.0.2-ha770c72_0 
+  cuda-compat-impl   conda-forge/linux-64::cuda-compat-impl-580.95.05-h676940d_0 
+
+
+
+Downloading and Extracting Packages: ...working...
+CondaHTTPError: HTTP 000 CONNECTION FAILED for url <https://conda.anaconda.org/conda-forge/linux-64/cuda-compat-impl-580.95.05-h676940d_0.conda>
+Elapsed: -
+
+An HTTP error occurred when trying to retrieve this URL.
+HTTP errors are often intermittent, and a simple retry will get you on your way.
+
+
+CondaHTTPError: HTTP 000 CONNECTION FAILED for url <https://conda.anaconda.org/conda-forge/linux-64/cuda-compat-impl-580.95.05-h676940d_0.conda>
+Elapsed: -
+
+An HTTP error occurred when trying to retrieve this URL.
+HTTP errors are often intermittent, and a simple retry will get you on your way.
+
+
+ done
+Channels:
+ - nvidia
+ - conda-forge
+Platform: linux-64
+Collecting package metadata (repodata.json): ...working... done
+Solving environment: ...working... done
+
+## Package Plan ##
+
+  environment location: $KVQ_WORK/envs/sglang
+
+  added / updated specs:
+    - cuda-compat=13.0
+
+
+The following packages will be downloaded:
+
+    package                    |            build
+    ---------------------------|-----------------
+    cuda-compat-impl-580.95.05 |       h676940d_0        40.8 MB  conda-forge
+    ------------------------------------------------------------
+                                           Total:        40.8 MB
+
+The following NEW packages will be INSTALLED:
+
+  cuda-compat        conda-forge/linux-64::cuda-compat-13.0.2-ha770c72_0 
+  cuda-compat-impl   conda-forge/linux-64::cuda-compat-impl-580.95.05-h676940d_0 
+
+
+
+Downloading and Extracting Packages: ...working... done
+Preparing transaction: ...working... done
+Verifying transaction: ...working... done
+Executing transaction: ...working... done

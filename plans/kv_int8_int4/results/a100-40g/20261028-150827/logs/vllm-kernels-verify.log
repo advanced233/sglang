@@ -1,0 +1,22 @@
+(MainProcess pid=3301130) WARNING 10-28 23:47:43 [cuda.py:988] Detected different devices in the system: NVIDIA A100-PCIE-40GB, NVIDIA A100 80GB PCIe, NVIDIA A100 80GB PCIe. Please make sure to set `CUDA_DEVICE_ORDER=PCI_BUS_ID` to avoid unexpected behavior.
+=== Cubin Wheel Install ===
+FlashInfer version: 0.7.0.post1
+Wheel index: https://flashinfer.ai/whl
+Requirement: flashinfer-cubin==0.7.0.post1
+Command: $KVQ_WORK/envs/vllm/bin/python -m pip install --upgrade --no-deps --index-url https://flashinfer.ai/whl flashinfer-cubin==0.7.0.post1
+Looking in indexes: https://flashinfer.ai/whl
+Requirement already satisfied: flashinfer-cubin==0.7.0.post1 in ./kvq-work/envs/vllm/lib/python3.12/site-packages (0.7.0.post1)
+✅ flashinfer-cubin installed successfully.
+=== JIT Cache Wheel Install ===
+FlashInfer version: 0.7.0.post1
+CUDA version: 12.9
+Wheel CUDA label: cu129
+Install mode: all
+Wheel index: https://flashinfer.ai/whl/cu129
+Requirement: flashinfer-jit-cache==0.7.0.post1+cu129
+Command: $KVQ_WORK/envs/vllm/bin/python -m pip install --upgrade --index-url https://flashinfer.ai/whl/cu129 flashinfer-jit-cache==0.7.0.post1+cu129
+Looking in indexes: https://flashinfer.ai/whl/cu129
+Collecting flashinfer-jit-cache==0.7.0.post1+cu129
+  Downloading flashinfer_jit_cache-0.7.0.post1%2Bcu129-cp39-abi3-manylinux_2_28_x86_64.whl (4.5 kB)
+Collecting flashinfer-jit-cache-sm100a==0.7.0.post1+cu129 (from flashinfer-jit-cache==0.7.0.post1+cu129)
+  Downloading flashinfer_jit_cache_sm100a-0.7.0.post1%2Bcu129-cp39-abi3-manylinux_2_28_x86_64.whl (272.6 MB)

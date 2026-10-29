@@ -1,0 +1,508 @@
+PREFIX=$KVQ_WORK/miniforge3
+Unpacking bootstrapper...
+Unpacking payload...
+Extracting ca-certificates-2026.10.19-hbd8a1cb_0.conda
+Extracting libgomp-16.2.0-he0feb66_7.conda
+Extracting libzlib-1.3.2-h25fd6f3_3.conda
+Extracting nlohmann_json-abi-3.12.0-h0f90c79_2.conda
+Extracting pybind11-abi-11-hc364b38_1.conda
+Extracting python_abi-3.14-9_cp314.conda
+Extracting tzdata-2026c-h151e31d_0.conda
+Extracting _openmp_mutex-4.5-20_gnu.conda
+Extracting zstd-1.5.7-hb78ec9c_7.conda
+Extracting ld_impl_linux-64-2.46.1-default_hbd61a6d_103.conda
+Extracting libgcc-16.2.0-ha9f2e26_7.conda
+Extracting bzip2-1.0.8-hda65f42_10.conda
+Extracting c-ares-1.34.9-hebe6cf0_0.conda
+Extracting keyutils-1.6.3-h7cc23a3_1.conda
+Extracting libev-4.33-h280c20c_3.conda
+Extracting libexpat-2.8.5-hd2095e1_0.conda
+Extracting libffi-3.7.0-h81df57d_1.conda
+Extracting libiconv-1.18-h0cb94f2_3.conda
+Extracting liblzma-5.8.3-hb03c661_1.conda
+Extracting libmpdec-4.0.0-hb03c661_2.conda
+Extracting libpython-3.14.9-hd51c5da_100_cp314.conda
+Extracting libstdcxx-16.2.0-h934c35e_7.conda
+Extracting libuuid-2.42.4-hcfc3c73_0.conda
+Extracting lzo-2.10-hebe6cf0_1003.conda
+Extracting ncurses-6.6-hdb14827_1.conda
+Extracting openssl-3.6.5-h781a0a9_0.conda
+Extracting reproc-14.2.8.post0-hee9eb32_0.conda
+Extracting tk-8.6.13-noxft_h1df4ec4_4.conda
+Extracting cpp-expected-1.3.1-h171cf75_1.conda
+Extracting fmt-12.1.0-h76c4fd7_1.conda
+Extracting icu-78.3-py310h44b86e0_2.conda
+Extracting libedit-3.1.20260512-pl5321h373387f_0.conda
+Extracting libmsgpack-c-6.1.0-h54a6638_7.conda
+Extracting libnghttp2-1.68.1-h74cf4be_1.conda
+Extracting libsolv-0.7.40-h72ddc62_0.conda
+Extracting libssh2-1.11.1-h6154650_1.conda
+Extracting lz4-c-1.10.0-hee9eb32_2.conda
+Extracting readline-8.3-hd6e31c0_1.conda
+Extracting reproc-cpp-14.2.8.post0-h1c70be6_0.conda
+Extracting simdjson-5.0.5-h4dbf13b_0.conda
+Extracting yaml-cpp-0.8.0-h54a6638_1.conda
+Extracting krb5-1.22.2-hbc21106_2.conda
+Extracting libpsl-0.23.1-hd9e3e90_1.conda
+Extracting libsqlite-3.54.1-h13e7031_0.conda
+Extracting libxml2-16-2.15.4-hf3af7cc_1.conda
+Extracting spdlog-1.17.0-hb6aa676_2.conda
+Extracting libcurl-8.23.0-ha042cf0_0.conda
+Extracting libxml2-2.15.4-h7df9aa5_1.conda
+Extracting python-3.14.9-hcd007b5_100_cp314.conda
+Extracting libarchive-3.8.9-gpl_h3152399_101.conda
+Extracting tomli-2.5.0-pyh5ded981_0.conda
+Extracting tomli-w-1.2.0-pyhd8ed1ab_0.conda
+Extracting libmamba-2.9.0-py314h6ba947b_3.conda
+Extracting menuinst-2.5.2-pyhba3e0a1_3.conda
+Extracting archspec-0.2.6-pyhd8ed1ab_0.conda
+Extracting backports.zstd-1.8.0-py314h723298c_1.conda
+Extracting boltons-26.2.0-pyhd8ed1ab_0.conda
+Extracting brotli-python-1.2.1-py314hcd2bdb6_0.conda
+Extracting cached_property-2.0.1-pyhcf101f3_0.conda
+Extracting certifi-2026.10.19-pyhd8ed1ab_0.conda
+Extracting colorama-0.4.6-pyhd8ed1ab_1.conda
+Extracting cpython-3.14.9-py314hd8ed1ab_100.conda
+Extracting distro-1.9.0-pyhd8ed1ab_1.conda
+Extracting frozendict-2.4.7-pyh851646a_2.conda
+Extracting hpack-4.2.0-pyhd8ed1ab_0.conda
+Extracting hyperframe-6.1.0-pyhd8ed1ab_0.conda
+Extracting idna-3.20-pyh5ded981_0.conda
+Extracting libmamba-spdlog-2.9.0-h340cb06_3.conda
+Extracting mamba-2.9.0-h323ee07_3.conda
+Extracting markupsafe-3.0.4-py314h93e9acf_1.conda
+Extracting msgpack-python-1.2.3-py314h5383ef5_0.conda
+Extracting packaging-26.3-pyhc364b38_0.conda
+Extracting pip-26.2.2-pyh145f28c_0.conda
+Extracting platformdirs-4.13.5-pyh5ded981_0.conda
+Extracting pluggy-1.7.0-pyh5ded981_0.conda
+Extracting pycosat-0.6.6-py314h89acca1_6.conda
+Extracting pyproject_hooks-1.3.3-pyhd8ed1ab_0.conda
+Extracting pysocks-1.7.1-pyha55dd90_7.conda
+Extracting python-installer-1.1.0-pyhe730653_0.conda
+Extracting ruamel.yaml.clib-0.2.15-py314hfe1a184_5.conda
+Extracting setuptools-84.2.1-pyhe730653_0.conda
+Extracting sniffio-1.3.1-pyhd8ed1ab_2.conda
+Extracting tqdm-4.70.1-pyhfa0c392_0.conda
+Extracting truststore-0.10.5-pyh5ded981_0.conda
+Extracting typing_extensions-4.16.0-pyhcf101f3_0.conda
+Extracting zipp-4.1.2-pyh5ded981_0.conda
+Extracting anyio-4.15.1-pyh5ded981_1.conda
+Extracting cached-property-2.0.1-pyhcf101f3_0.conda
+Extracting conda-package-streaming-0.13.0-pyhd8ed1ab_0.conda
+Extracting h11-0.16.0-pyhcf101f3_1.conda
+Extracting h2-4.4.1-pyhcf101f3_0.conda
+Extracting importlib-metadata-9.0.1-pyhcf101f3_0.conda
+Extracting jinja2-3.1.6-pyhcf101f3_1.conda
+Extracting libmambapy-2.9.0-py314h6226ee1_3.conda
+Extracting python-gil-3.14.9-h4df99d1_100.conda
+Extracting ruamel.yaml-0.19.1-pyhcf101f3_0.conda
+Extracting typing-extensions-4.16.0-h69aa097_0.conda
+Extracting typing-inspection-0.4.4-pyhcf101f3_0.conda
+Extracting _python_abi3_support-1.0-hd8ed1ab_3.conda
+Extracting annotated-types-0.8.0-pyhd8ed1ab_0.conda
+Extracting conda-libmamba-solver-26.10.0-pyh5ded981_0.conda
+Extracting httpcore-1.0.9-pyh29332c3_0.conda
+Extracting pydantic-core-2.50.1-py314h7e8cd81_1.conda
+Extracting python-build-1.6.1-pyhc364b38_0.conda
+Extracting urllib3-2.8.0-pyhd8ed1ab_0.conda
+Extracting charset-normalizer-3.5.2-h1114479_0.conda
+Extracting httpx-0.28.1-pyhd8ed1ab_0.conda
+Extracting py-rattler-0.26.0-py311hc91d8b8_0.conda
+Extracting pydantic-2.14.1-pyh5ded981_0.conda
+Extracting requests-2.34.2-pyhcf101f3_0.conda
+Extracting conda-package-handling-2.6.0-pyh5ded981_0.conda
+Extracting unearth-0.18.3-pyhd8ed1ab_0.conda
+Extracting conda-index-0.13.0-pyh5ded981_0.conda
+Extracting conda-pypi-0.13.0-pyh5ded981_1.conda
+Extracting conda-lockfiles-0.2.2-pyhd8ed1ab_0.conda
+Extracting conda-rattler-solver-0.2.0-pyh5ded981_0.conda
+Extracting conda-26.9.4-py314h9e666f3_0.conda
+Extracting conda-self-0.3.0-pyhd8ed1ab_0.conda
+
+Installing base environment...
+
+Transaction
+
+  Prefix: $KVQ_WORK/miniforge3
+
+  Updating specs:
+
+   - ca-certificates==2026.10.19=hbd8a1cb_0
+   - libgomp==16.2.0=he0feb66_7
+   - libzlib==1.3.2=h25fd6f3_3
+   - nlohmann_json-abi==3.12.0=h0f90c79_2
+   - pybind11-abi==11=hc364b38_1
+   - python_abi==3.14=9_cp314
+   - tzdata==2026c=h151e31d_0
+   - _openmp_mutex==4.5=20_gnu
+   - zstd==1.5.7=hb78ec9c_7
+   - ld_impl_linux-64==2.46.1=default_hbd61a6d_103
+   - libgcc==16.2.0=ha9f2e26_7
+   - bzip2==1.0.8=hda65f42_10
+   - c-ares==1.34.9=hebe6cf0_0
+   - keyutils==1.6.3=h7cc23a3_1
+   - libev==4.33=h280c20c_3
+   - libexpat==2.8.5=hd2095e1_0
+   - libffi==3.7.0=h81df57d_1
+   - libiconv==1.18=h0cb94f2_3
+   - liblzma==5.8.3=hb03c661_1
+   - libmpdec==4.0.0=hb03c661_2
+   - libpython==3.14.9=hd51c5da_100_cp314
+   - libstdcxx==16.2.0=h934c35e_7
+   - libuuid==2.42.4=hcfc3c73_0
+   - lzo==2.10=hebe6cf0_1003
+   - ncurses==6.6=hdb14827_1
+   - openssl==3.6.5=h781a0a9_0
+   - reproc==14.2.8.post0=hee9eb32_0
+   - tk==8.6.13=noxft_h1df4ec4_4
+   - cpp-expected==1.3.1=h171cf75_1
+   - fmt==12.1.0=h76c4fd7_1
+   - icu==78.3=py310h44b86e0_2
+   - libedit==3.1.20260512=pl5321h373387f_0
+   - libmsgpack-c==6.1.0=h54a6638_7
+   - libnghttp2==1.68.1=h74cf4be_1
+   - libsolv==0.7.40=h72ddc62_0
+   - libssh2==1.11.1=h6154650_1
+   - lz4-c==1.10.0=hee9eb32_2
+   - readline==8.3=hd6e31c0_1
+   - reproc-cpp==14.2.8.post0=h1c70be6_0
+   - simdjson==5.0.5=h4dbf13b_0
+   - yaml-cpp==0.8.0=h54a6638_1
+   - krb5==1.22.2=hbc21106_2
+   - libpsl==0.23.1=hd9e3e90_1
+   - libsqlite==3.54.1=h13e7031_0
+   - libxml2-16==2.15.4=hf3af7cc_1
+   - spdlog==1.17.0=hb6aa676_2
+   - libcurl==8.23.0=ha042cf0_0
+   - libxml2==2.15.4=h7df9aa5_1
+   - python==3.14.9=hcd007b5_100_cp314
+   - libarchive==3.8.9=gpl_h3152399_101
+   - tomli==2.5.0=pyh5ded981_0
+   - tomli-w==1.2.0=pyhd8ed1ab_0
+   - libmamba==2.9.0=py314h6ba947b_3
+   - menuinst==2.5.2=pyhba3e0a1_3
+   - archspec==0.2.6=pyhd8ed1ab_0
+   - backports.zstd==1.8.0=py314h723298c_1
+   - boltons==26.2.0=pyhd8ed1ab_0
+   - brotli-python==1.2.1=py314hcd2bdb6_0
+   - cached_property==2.0.1=pyhcf101f3_0
+   - certifi==2026.10.19=pyhd8ed1ab_0
+   - colorama==0.4.6=pyhd8ed1ab_1
+   - cpython==3.14.9=py314hd8ed1ab_100
+   - distro==1.9.0=pyhd8ed1ab_1
+   - frozendict==2.4.7=pyh851646a_2
+   - hpack==4.2.0=pyhd8ed1ab_0
+   - hyperframe==6.1.0=pyhd8ed1ab_0
+   - idna==3.20=pyh5ded981_0
+   - libmamba-spdlog==2.9.0=h340cb06_3
+   - mamba==2.9.0=h323ee07_3
+   - markupsafe==3.0.4=py314h93e9acf_1
+   - msgpack-python==1.2.3=py314h5383ef5_0
+   - packaging==26.3=pyhc364b38_0
+   - pip==26.2.2=pyh145f28c_0
+   - platformdirs==4.13.5=pyh5ded981_0
+   - pluggy==1.7.0=pyh5ded981_0
+   - pycosat==0.6.6=py314h89acca1_6
+   - pyproject_hooks==1.3.3=pyhd8ed1ab_0
+   - pysocks==1.7.1=pyha55dd90_7
+   - python-installer==1.1.0=pyhe730653_0
+   - ruamel.yaml.clib==0.2.15=py314hfe1a184_5
+   - setuptools==84.2.1=pyhe730653_0
+   - sniffio==1.3.1=pyhd8ed1ab_2
+   - tqdm==4.70.1=pyhfa0c392_0
+   - truststore==0.10.5=pyh5ded981_0
+   - typing_extensions==4.16.0=pyhcf101f3_0
+   - zipp==4.1.2=pyh5ded981_0
+   - anyio==4.15.1=pyh5ded981_1
+   - cached-property==2.0.1=pyhcf101f3_0
+   - conda-package-streaming==0.13.0=pyhd8ed1ab_0
+   - h11==0.16.0=pyhcf101f3_1
+   - h2==4.4.1=pyhcf101f3_0
+   - importlib-metadata==9.0.1=pyhcf101f3_0
+   - jinja2==3.1.6=pyhcf101f3_1
+   - libmambapy==2.9.0=py314h6226ee1_3
+   - python-gil==3.14.9=h4df99d1_100
+   - ruamel.yaml==0.19.1=pyhcf101f3_0
+   - typing-extensions==4.16.0=h69aa097_0
+   - typing-inspection==0.4.4=pyhcf101f3_0
+   - _python_abi3_support==1.0=hd8ed1ab_3
+   - annotated-types==0.8.0=pyhd8ed1ab_0
+   - conda-libmamba-solver==26.10.0=pyh5ded981_0
+   - httpcore==1.0.9=pyh29332c3_0
+   - pydantic-core==2.50.1=py314h7e8cd81_1
+   - python-build==1.6.1=pyhc364b38_0
+   - urllib3==2.8.0=pyhd8ed1ab_0
+   - charset-normalizer==3.5.2=h1114479_0
+   - httpx==0.28.1=pyhd8ed1ab_0
+   - py-rattler==0.26.0=py311hc91d8b8_0
+   - pydantic==2.14.1=pyh5ded981_0
+   - requests==2.34.2=pyhcf101f3_0
+   - conda-package-handling==2.6.0=pyh5ded981_0
+   - unearth==0.18.3=pyhd8ed1ab_0
+   - conda-index==0.13.0=pyh5ded981_0
+   - conda-pypi==0.13.0=pyh5ded981_1
+   - conda-lockfiles==0.2.2=pyhd8ed1ab_0
+   - conda-rattler-solver==0.2.0=pyh5ded981_0
+   - conda==26.9.4=py314h9e666f3_0
+   - conda-self==0.3.0=pyhd8ed1ab_0
+
+
+  Package                         Version  Build                 Channel         Size
+───────────────────────────────────────────────────────────────────────────────────────
+  Install:
+───────────────────────────────────────────────────────────────────────────────────────
+
+  + _openmp_mutex                     4.5  20_gnu                conda-forge         
+  + _python_abi3_support              1.0  hd8ed1ab_3            conda-forge         
+  + annotated-types                 0.8.0  pyhd8ed1ab_0          conda-forge         
+  + anyio                          4.15.1  pyh5ded981_1          conda-forge         
+  + archspec                        0.2.6  pyhd8ed1ab_0          conda-forge         
+  + backports.zstd                  1.8.0  py314h723298c_1       conda-forge         
+  + boltons                        26.2.0  pyhd8ed1ab_0          conda-forge         
+  + brotli-python                   1.2.1  py314hcd2bdb6_0       conda-forge         
+  + bzip2                           1.0.8  hda65f42_10           conda-forge         
+  + c-ares                         1.34.9  hebe6cf0_0            conda-forge         
+  + ca-certificates            2026.10.19  hbd8a1cb_0            conda-forge         
+  + cached-property                 2.0.1  pyhcf101f3_0          conda-forge         
+  + cached_property                 2.0.1  pyhcf101f3_0          conda-forge         
+  + certifi                    2026.10.19  pyhd8ed1ab_0          conda-forge         
+  + charset-normalizer              3.5.2  h1114479_0            conda-forge         
+  + colorama                        0.4.6  pyhd8ed1ab_1          conda-forge         
+  + conda                          26.9.4  py314h9e666f3_0       conda-forge         
+  + conda-index                    0.13.0  pyh5ded981_0          conda-forge         
+  + conda-libmamba-solver         26.10.0  pyh5ded981_0          conda-forge         
+  + conda-lockfiles                 0.2.2  pyhd8ed1ab_0          conda-forge         
+  + conda-package-handling          2.6.0  pyh5ded981_0          conda-forge         
+  + conda-package-streaming        0.13.0  pyhd8ed1ab_0          conda-forge         
+  + conda-pypi                     0.13.0  pyh5ded981_1          conda-forge         
+  + conda-rattler-solver            0.2.0  pyh5ded981_0          conda-forge         
+  + conda-self                      0.3.0  pyhd8ed1ab_0          conda-forge         
+  + cpp-expected                    1.3.1  h171cf75_1            conda-forge         
+  + cpython                        3.14.9  py314hd8ed1ab_100     conda-forge         
+  + distro                          1.9.0  pyhd8ed1ab_1          conda-forge         
+  + fmt                            12.1.0  h76c4fd7_1            conda-forge         
+  + frozendict                      2.4.7  pyh851646a_2          conda-forge         
+  + h11                            0.16.0  pyhcf101f3_1          conda-forge         
+  + h2                              4.4.1  pyhcf101f3_0          conda-forge         
+  + hpack                           4.2.0  pyhd8ed1ab_0          conda-forge         
+  + httpcore                        1.0.9  pyh29332c3_0          conda-forge         
+  + httpx                          0.28.1  pyhd8ed1ab_0          conda-forge         
+  + hyperframe                      6.1.0  pyhd8ed1ab_0          conda-forge         
+  + icu                              78.3  py310h44b86e0_2       conda-forge         
+  + idna                             3.20  pyh5ded981_0          conda-forge         
+  + importlib-metadata              9.0.1  pyhcf101f3_0          conda-forge         
+  + jinja2                          3.1.6  pyhcf101f3_1          conda-forge         
+  + keyutils                        1.6.3  h7cc23a3_1            conda-forge         
+  + krb5                           1.22.2  hbc21106_2            conda-forge         
+  + ld_impl_linux-64               2.46.1  default_hbd61a6d_103  conda-forge         
+  + libarchive                      3.8.9  gpl_h3152399_101      conda-forge         
+  + libcurl                        8.23.0  ha042cf0_0            conda-forge         
+  + libedit                  3.1.20260512  pl5321h373387f_0      conda-forge         
+  + libev                            4.33  h280c20c_3            conda-forge         
+  + libexpat                        2.8.5  hd2095e1_0            conda-forge         
+  + libffi                          3.7.0  h81df57d_1            conda-forge         
+  + libgcc                         16.2.0  ha9f2e26_7            conda-forge         
+  + libgomp                        16.2.0  he0feb66_7            conda-forge         
+  + libiconv                         1.18  h0cb94f2_3            conda-forge         
+  + liblzma                         5.8.3  hb03c661_1            conda-forge         
+  + libmamba                        2.9.0  py314h6ba947b_3       conda-forge         
+  + libmamba-spdlog                 2.9.0  h340cb06_3            conda-forge         
+  + libmambapy                      2.9.0  py314h6226ee1_3       conda-forge         
+  + libmpdec                        4.0.0  hb03c661_2            conda-forge         
+  + libmsgpack-c                    6.1.0  h54a6638_7            conda-forge         
+  + libnghttp2                     1.68.1  h74cf4be_1            conda-forge         
+  + libpsl                         0.23.1  hd9e3e90_1            conda-forge         
+  + libpython                      3.14.9  hd51c5da_100_cp314    conda-forge         
+  + libsolv                        0.7.40  h72ddc62_0            conda-forge         
+  + libsqlite                      3.54.1  h13e7031_0            conda-forge         
+  + libssh2                        1.11.1  h6154650_1            conda-forge         
+  + libstdcxx                      16.2.0  h934c35e_7            conda-forge         
+  + libuuid                        2.42.4  hcfc3c73_0            conda-forge         
+  + libxml2                        2.15.4  h7df9aa5_1            conda-forge         
+  + libxml2-16                     2.15.4  hf3af7cc_1            conda-forge         
+  + libzlib                         1.3.2  h25fd6f3_3            conda-forge         
+  + lz4-c                          1.10.0  hee9eb32_2            conda-forge         
+  + lzo                              2.10  hebe6cf0_1003         conda-forge         
+  + mamba                           2.9.0  h323ee07_3            conda-forge         
+  + markupsafe                      3.0.4  py314h93e9acf_1       conda-forge         
+  + menuinst                        2.5.2  pyhba3e0a1_3          conda-forge         
+  + msgpack-python                  1.2.3  py314h5383ef5_0       conda-forge         
+  + ncurses                           6.6  hdb14827_1            conda-forge         
+  + nlohmann_json-abi              3.12.0  h0f90c79_2            conda-forge         
+  + openssl                         3.6.5  h781a0a9_0            conda-forge         
+  + packaging                        26.3  pyhc364b38_0          conda-forge         
+  + pip                            26.2.2  pyh145f28c_0          conda-forge         
+  + platformdirs                   4.13.5  pyh5ded981_0          conda-forge         
+  + pluggy                          1.7.0  pyh5ded981_0          conda-forge         
+  + py-rattler                     0.26.0  py311hc91d8b8_0       conda-forge         
+  + pybind11-abi                       11  hc364b38_1            conda-forge         
+  + pycosat                         0.6.6  py314h89acca1_6       conda-forge         
+  + pydantic                       2.14.1  pyh5ded981_0          conda-forge         
+  + pydantic-core                  2.50.1  py314h7e8cd81_1       conda-forge         
+  + pyproject_hooks                 1.3.3  pyhd8ed1ab_0          conda-forge         
+  + pysocks                         1.7.1  pyha55dd90_7          conda-forge         
+  + python                         3.14.9  hcd007b5_100_cp314    conda-forge         
+  + python-build                    1.6.1  pyhc364b38_0          conda-forge         
+  + python-gil                     3.14.9  h4df99d1_100          conda-forge         
+  + python-installer                1.1.0  pyhe730653_0          conda-forge         
+  + python_abi                       3.14  9_cp314               conda-forge         
+  + readline                          8.3  hd6e31c0_1            conda-forge         
+  + reproc                   14.2.8.post0  hee9eb32_0            conda-forge         
+  + reproc-cpp               14.2.8.post0  h1c70be6_0            conda-forge         
+  + requests                       2.34.2  pyhcf101f3_0          conda-forge         
+  + ruamel.yaml                    0.19.1  pyhcf101f3_0          conda-forge         
+  + ruamel.yaml.clib               0.2.15  py314hfe1a184_5       conda-forge         
+  + setuptools                     84.2.1  pyhe730653_0          conda-forge         
+  + simdjson                        5.0.5  h4dbf13b_0            conda-forge         
+  + sniffio                         1.3.1  pyhd8ed1ab_2          conda-forge         
+  + spdlog                         1.17.0  hb6aa676_2            conda-forge         
+  + tk                             8.6.13  noxft_h1df4ec4_4      conda-forge         
+  + tomli                           2.5.0  pyh5ded981_0          conda-forge         
+  + tomli-w                         1.2.0  pyhd8ed1ab_0          conda-forge         
+  + tqdm                           4.70.1  pyhfa0c392_0          conda-forge         
+  + truststore                     0.10.5  pyh5ded981_0          conda-forge         
+  + typing-extensions              4.16.0  h69aa097_0            conda-forge         
+  + typing-inspection               0.4.4  pyhcf101f3_0          conda-forge         
+  + typing_extensions              4.16.0  pyhcf101f3_0          conda-forge         
+  + tzdata                          2026c  h151e31d_0            conda-forge         
+  + unearth                        0.18.3  pyhd8ed1ab_0          conda-forge         
+  + urllib3                         2.8.0  pyhd8ed1ab_0          conda-forge         
+  + yaml-cpp                        0.8.0  h54a6638_1            conda-forge         
+  + zipp                            4.1.2  pyh5ded981_0          conda-forge         
+  + zstd                            1.5.7  hb78ec9c_7            conda-forge         
+
+  Summary:
+
+  Install: 118 packages
+
+  Total download: 0 B
+
+───────────────────────────────────────────────────────────────────────────────────────
+
+
+warning  libmamba Security Warning: This transaction includes executing package scripts (pre/post-link/unlink) if present. These scripts can contain arbitrary code. Please ensure you trust the package sources.
+
+Transaction starting
+Linking ca-certificates-2026.10.19-hbd8a1cb_0
+Linking libgomp-16.2.0-he0feb66_7
+Linking libzlib-1.3.2-h25fd6f3_3
+Linking nlohmann_json-abi-3.12.0-h0f90c79_2
+Linking pybind11-abi-11-hc364b38_1
+Linking python_abi-3.14-9_cp314
+Linking tzdata-2026c-h151e31d_0
+Linking _openmp_mutex-4.5-20_gnu
+Linking zstd-1.5.7-hb78ec9c_7
+Linking ld_impl_linux-64-2.46.1-default_hbd61a6d_103
+Linking libgcc-16.2.0-ha9f2e26_7
+Linking bzip2-1.0.8-hda65f42_10
+Linking c-ares-1.34.9-hebe6cf0_0
+Linking keyutils-1.6.3-h7cc23a3_1
+Linking libev-4.33-h280c20c_3
+Linking libexpat-2.8.5-hd2095e1_0
+Linking libffi-3.7.0-h81df57d_1
+Linking libiconv-1.18-h0cb94f2_3
+Linking liblzma-5.8.3-hb03c661_1
+Linking libmpdec-4.0.0-hb03c661_2
+Linking libpython-3.14.9-hd51c5da_100_cp314
+Linking libstdcxx-16.2.0-h934c35e_7
+Linking libuuid-2.42.4-hcfc3c73_0
+Linking lzo-2.10-hebe6cf0_1003
+Linking ncurses-6.6-hdb14827_1
+Linking openssl-3.6.5-h781a0a9_0
+Linking reproc-14.2.8.post0-hee9eb32_0
+Linking tk-8.6.13-noxft_h1df4ec4_4
+Linking cpp-expected-1.3.1-h171cf75_1
+Linking fmt-12.1.0-h76c4fd7_1
+Linking icu-78.3-py310h44b86e0_2
+Linking libedit-3.1.20260512-pl5321h373387f_0
+Linking libmsgpack-c-6.1.0-h54a6638_7
+Linking libnghttp2-1.68.1-h74cf4be_1
+Linking libsolv-0.7.40-h72ddc62_0
+Linking libssh2-1.11.1-h6154650_1
+Linking lz4-c-1.10.0-hee9eb32_2
+Linking readline-8.3-hd6e31c0_1
+Linking reproc-cpp-14.2.8.post0-h1c70be6_0
+Linking simdjson-5.0.5-h4dbf13b_0
+Linking yaml-cpp-0.8.0-h54a6638_1
+Linking krb5-1.22.2-hbc21106_2
+Linking libpsl-0.23.1-hd9e3e90_1
+Linking libsqlite-3.54.1-h13e7031_0
+Linking libxml2-16-2.15.4-hf3af7cc_1
+Linking spdlog-1.17.0-hb6aa676_2
+Linking libcurl-8.23.0-ha042cf0_0
+Linking libxml2-2.15.4-h7df9aa5_1
+Linking python-3.14.9-hcd007b5_100_cp314
+Linking libarchive-3.8.9-gpl_h3152399_101
+Linking tomli-2.5.0-pyh5ded981_0
+Linking tomli-w-1.2.0-pyhd8ed1ab_0
+Linking libmamba-2.9.0-py314h6ba947b_3
+Linking menuinst-2.5.2-pyhba3e0a1_3
+Linking archspec-0.2.6-pyhd8ed1ab_0
+Linking backports.zstd-1.8.0-py314h723298c_1
+Linking boltons-26.2.0-pyhd8ed1ab_0
+Linking brotli-python-1.2.1-py314hcd2bdb6_0
+Linking cached_property-2.0.1-pyhcf101f3_0
+Linking certifi-2026.10.19-pyhd8ed1ab_0
+Linking colorama-0.4.6-pyhd8ed1ab_1
+Linking cpython-3.14.9-py314hd8ed1ab_100
+Linking distro-1.9.0-pyhd8ed1ab_1
+Linking frozendict-2.4.7-pyh851646a_2
+Linking hpack-4.2.0-pyhd8ed1ab_0
+Linking hyperframe-6.1.0-pyhd8ed1ab_0
+Linking idna-3.20-pyh5ded981_0
+Linking libmamba-spdlog-2.9.0-h340cb06_3
+Linking mamba-2.9.0-h323ee07_3
+Linking markupsafe-3.0.4-py314h93e9acf_1
+Linking msgpack-python-1.2.3-py314h5383ef5_0
+Linking packaging-26.3-pyhc364b38_0
+Linking pip-26.2.2-pyh145f28c_0
+Linking platformdirs-4.13.5-pyh5ded981_0
+Linking pluggy-1.7.0-pyh5ded981_0
+Linking pycosat-0.6.6-py314h89acca1_6
+Linking pyproject_hooks-1.3.3-pyhd8ed1ab_0
+Linking pysocks-1.7.1-pyha55dd90_7
+Linking python-installer-1.1.0-pyhe730653_0
+Linking ruamel.yaml.clib-0.2.15-py314hfe1a184_5
+Linking setuptools-84.2.1-pyhe730653_0
+Linking sniffio-1.3.1-pyhd8ed1ab_2
+Linking tqdm-4.70.1-pyhfa0c392_0
+Linking truststore-0.10.5-pyh5ded981_0
+Linking typing_extensions-4.16.0-pyhcf101f3_0
+Linking zipp-4.1.2-pyh5ded981_0
+Linking anyio-4.15.1-pyh5ded981_1
+Linking cached-property-2.0.1-pyhcf101f3_0
+Linking conda-package-streaming-0.13.0-pyhd8ed1ab_0
+Linking h11-0.16.0-pyhcf101f3_1
+Linking h2-4.4.1-pyhcf101f3_0
+Linking importlib-metadata-9.0.1-pyhcf101f3_0
+Linking jinja2-3.1.6-pyhcf101f3_1
+Linking libmambapy-2.9.0-py314h6226ee1_3
+Linking python-gil-3.14.9-h4df99d1_100
+Linking ruamel.yaml-0.19.1-pyhcf101f3_0
+Linking typing-extensions-4.16.0-h69aa097_0
+Linking typing-inspection-0.4.4-pyhcf101f3_0
+Linking _python_abi3_support-1.0-hd8ed1ab_3
+Linking annotated-types-0.8.0-pyhd8ed1ab_0
+Linking conda-libmamba-solver-26.10.0-pyh5ded981_0
+Linking httpcore-1.0.9-pyh29332c3_0
+Linking pydantic-core-2.50.1-py314h7e8cd81_1
+Linking python-build-1.6.1-pyhc364b38_0
+Linking urllib3-2.8.0-pyhd8ed1ab_0
+Linking charset-normalizer-3.5.2-h1114479_0
+Linking httpx-0.28.1-pyhd8ed1ab_0
+Linking py-rattler-0.26.0-py311hc91d8b8_0
+Linking pydantic-2.14.1-pyh5ded981_0
+Linking requests-2.34.2-pyhcf101f3_0
+Linking conda-package-handling-2.6.0-pyh5ded981_0
+Linking unearth-0.18.3-pyhd8ed1ab_0
+Linking conda-index-0.13.0-pyh5ded981_0
+Linking conda-pypi-0.13.0-pyh5ded981_1
+Linking conda-lockfiles-0.2.2-pyhd8ed1ab_0
+Linking conda-rattler-solver-0.2.0-pyh5ded981_0
+Linking conda-26.9.4-py314h9e666f3_0
+Linking conda-self-0.3.0-pyhd8ed1ab_0
+
+Transaction finished
+
+installation finished.
