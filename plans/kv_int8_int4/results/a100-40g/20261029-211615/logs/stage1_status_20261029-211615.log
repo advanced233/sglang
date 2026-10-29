@@ -1,0 +1,4 @@
+cpu_exit=0
+gpu_exit=0
+m3_exit=0
+m2_exit=0

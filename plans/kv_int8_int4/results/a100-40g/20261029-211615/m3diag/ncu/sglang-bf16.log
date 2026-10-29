@@ -1,0 +1,5 @@
+==PROF== Connected to process 160717 ($KVQ_WORK/envs/sglang/bin/python3.12)
+==PROF== Profiling "_fwd_grouped_kernel_stage1" - 0: 0%....50%....100% - 49 passes
+==PROF== Profiling "_fwd_kernel_stage2" - 1: 0%....50%....100% - 49 passes
+==PROF== Disconnected from process 160717
+==PROF== Report: $KVQ_WORK/outputs/m3diag/20261029-211615/ncu/sglang-bf16.ncu-rep

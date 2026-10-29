@@ -1,0 +1,20 @@
+==PROF== Connected to process 169193 ($KVQ_WORK/envs/vllm/bin/python3.12)
+==PROF== Profiling "unrolled_elementwise_kernel" - 0: 0%....50%....100% - 47 passes
+==PROF== Profiling "elementwise_kernel" - 1: 0%....50%....100% - 48 passes
+==PROF== Profiling "vectorized_elementwise_kernel" - 2: 0%....50%....100% - 48 passes
+==PROF== Profiling "hadamard_transform_kernel" - 3: 0%....50%....100% - 47 passes
+==PROF== Profiling "unrolled_elementwise_kernel" - 4: 0%....50%....100% - 47 passes
+==PROF== Profiling "vectorized_elementwise_kernel" - 5: 0%....50%....100% - 47 passes
+==PROF== Profiling "vectorized_elementwise_kernel" - 6: 0%....50%....100% - 48 passes
+==PROF== Profiling "_attn_packed" - 7: 0%....50%....100% - 48 passes
+==PROF== Profiling "reduce_segments" - 8: 0%....50%....100% - 48 passes
+==PROF== Profiling "unrolled_elementwise_kernel" - 9: 0%....50%....100% - 49 passes
+==PROF== Profiling "vectorized_elementwise_kernel" - 10: 0%....50%....100% - 48 passes
+==PROF== Profiling "hadamard_transform_kernel" - 11: 0%....50%....100% - 47 passes
+==PROF== Profiling "unrolled_elementwise_kernel" - 12: 0%....50%....100% - 47 passes
+==PROF== Profiling "vectorized_elementwise_kernel" - 13: 0%....50%....100% - 47 passes
+==PROF== Profiling "elementwise_kernel" - 14: 0%....50%....100% - 48 passes
+==PROF== Profiling "vectorized_elementwise_kernel" - 15: 0%....50%....100% - 49 passes
+==PROF== Profiling "vectorized_elementwise_kernel" - 16: 0%....50%....100% - 48 passes
+==PROF== Disconnected from process 169193
+==PROF== Report: $KVQ_WORK/outputs/m3diag/20261029-211615/ncu/vllm-int4.ncu-rep

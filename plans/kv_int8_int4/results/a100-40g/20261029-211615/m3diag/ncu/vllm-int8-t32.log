@@ -1,0 +1,5 @@
+==PROF== Connected to process 165392 ($KVQ_WORK/envs/vllm/bin/python3.12)
+==PROF== Profiling "kernel_unified_attention" - 0: 0%....50%....100% - 48 passes
+==PROF== Profiling "reduce_segments" - 1: 0%....50%....100% - 49 passes
+==PROF== Disconnected from process 165392
+==PROF== Report: $KVQ_WORK/outputs/m3diag/20261029-211615/ncu/vllm-int8-t32.ncu-rep

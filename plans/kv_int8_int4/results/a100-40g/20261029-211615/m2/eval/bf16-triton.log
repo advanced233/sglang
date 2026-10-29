@@ -1,0 +1,1117 @@
+$KVQ_WORK/envs/sgleval/bin/sgl-eval run gsm8k --base-url http://127.0.0.1:49563/v1 --chat-template-kwarg enable_thinking=false --temperature 0.7 --top-p 0.8
+Run directory: ~/.sgl_eval/sgl_eval_gsm8k_20261029-213509
+
+gsm8k:   0%|          | 0/1319 [00:00<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:00<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:01<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:01<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:02<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:02<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:03<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:03<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:04<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:04<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:05<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:05<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:06<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:06<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:07<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:07<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:08<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:08<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:09<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:09<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:10<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:10<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:11<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:11<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:12<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:12<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:13<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:13<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:14<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:14<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:15<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:15<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:16<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:16<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:17<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:17<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:18<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:18<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:19<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:19<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:20<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:20<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:21<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:21<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:22<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:22<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:23<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:23<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:24<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:24<?, ?it/s]Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+
+gsm8k:   0%|          | 0/1319 [00:25<?, ?it/s]Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+
+gsm8k:   0%|          | 0/1319 [00:25<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:26<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:26<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:27<?, ?it/s]Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+
+gsm8k:   0%|          | 0/1319 [00:27<?, ?it/s]Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+
+gsm8k:   0%|          | 0/1319 [00:28<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:28<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:29<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:29<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:30<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:30<?, ?it/s]Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+
+gsm8k:   0%|          | 0/1319 [00:31<?, ?it/s]Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+
+gsm8k:   0%|          | 0/1319 [00:31<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:32<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:32<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:33<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:33<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:34<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:34<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:35<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:35<?, ?it/s]Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+
+gsm8k:   0%|          | 0/1319 [00:36<?, ?it/s]Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+
+gsm8k:   0%|          | 0/1319 [00:36<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:37<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:37<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:38<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:38<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:39<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:39<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:40<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:40<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:41<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:41<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:42<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:42<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:43<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:43<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:44<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:44<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:45<?, ?it/s]Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+
+gsm8k:   0%|          | 0/1319 [00:45<?, ?it/s]Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+
+gsm8k:   0%|          | 0/1319 [00:46<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:46<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:47<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:47<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:48<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:48<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:49<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:49<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:50<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:50<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:51<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:51<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:52<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:52<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:53<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:53<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:54<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:54<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:55<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:55<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:56<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:56<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:57<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:57<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:58<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:58<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:59<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [00:59<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:00<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:00<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:01<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:01<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:02<?, ?it/s]Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+
+gsm8k:   0%|          | 0/1319 [01:02<?, ?it/s]Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+
+gsm8k:   0%|          | 0/1319 [01:03<?, ?it/s]Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+
+gsm8k:   0%|          | 0/1319 [01:03<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:04<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:04<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:05<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:05<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:06<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:06<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:07<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:07<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:08<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:08<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:09<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:09<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:10<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:10<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:11<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:11<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:12<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:12<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:13<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:13<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:14<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:14<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:15<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:15<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:16<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:16<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:17<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:17<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:18<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:18<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:19<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:19<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:20<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:20<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:21<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:21<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:22<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:22<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:23<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:23<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:24<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:24<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:25<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:25<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:26<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:26<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:27<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:27<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:28<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:28<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:29<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:29<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:30<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:30<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:31<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:31<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:32<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:32<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:33<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:33<?, ?it/s]
+gsm8k:   0%|          | 0/1319 [01:34<?, ?it/s]Sampler exhausted retries; returning empty sample.
+
+gsm8k:   0%|          | 1/1319 [01:34<34:33:16, 94.38s/it, acc=0.00%, truncated=0/1 (0.00%)]Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+
+gsm8k:   0%|          | 4/1319 [01:34<6:32:17, 17.90s/it, acc=0.00%, truncated=0/4 (0.00%)] Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+
+gsm8k:   1%|          | 8/1319 [01:34<6:31:06, 17.90s/it, acc=0.00%, truncated=0/8 (0.00%)]Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+
+gsm8k:   1%|          | 11/1319 [01:34<1:45:38,  4.85s/it, acc=0.00%, truncated=0/11 (0.00%)]Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+
+gsm8k:   2%|▏         | 24/1319 [01:34<35:45,  1.66s/it, acc=0.00%, truncated=0/24 (0.00%)]  Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+
+gsm8k:   3%|▎         | 38/1319 [01:34<17:38,  1.21it/s, acc=0.00%, truncated=0/38 (0.00%)]Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+
+gsm8k:   4%|▎         | 49/1319 [01:34<11:14,  1.88it/s, acc=0.00%, truncated=0/49 (0.00%)]Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+
+gsm8k:   4%|▍         | 55/1319 [01:35<11:11,  1.88it/s, acc=0.00%, truncated=0/55 (0.00%)]Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+
+gsm8k:   5%|▍         | 60/1319 [01:35<07:27,  2.81it/s, acc=0.00%, truncated=0/60 (0.00%)]Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+Sampler exhausted retries; returning empty sample.
+
+gsm8k:   5%|▍         | 64/1319 [01:35<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:36<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:36<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 1/6), backing off 1s: Connection error.
+Sampler exception (trial 1/6), backing off 1s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:37<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:37<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 2/6), backing off 2s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:38<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:38<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+Sampler exception (trial 2/6), backing off 2s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:39<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:39<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:40<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:40<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:41<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:41<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:42<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+Sampler exception (trial 3/6), backing off 4s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:42<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:43<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:43<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:44<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:44<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:45<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:45<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:46<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:46<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:47<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+Sampler exception (trial 4/6), backing off 8s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:47<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:48<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:48<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:49<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:49<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:50<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:50<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:50<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:51<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:51<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:52<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:52<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:53<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:53<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:54<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:54<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:55<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:55<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:56<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:56<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+Sampler exception (trial 5/6), backing off 16s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [01:57<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:57<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:58<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:58<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:59<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [01:59<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:00<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:00<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:01<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:01<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:02<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:02<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:03<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:03<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:04<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:04<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:05<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:05<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:06<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:06<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:07<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:07<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:08<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:08<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:09<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:09<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:10<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:10<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:11<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:11<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:12<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:12<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [02:13<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [02:13<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [02:14<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]Sampler exception (trial 6/6), backing off 32s: Connection error.
+Sampler exception (trial 6/6), backing off 32s: Connection error.
+
+gsm8k:   5%|▍         | 64/1319 [02:14<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:15<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:15<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:16<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
+gsm8k:   5%|▍         | 64/1319 [02:16<07:26,  2.81it/s, acc=0.00%, truncated=0/64 (0.00%)]
