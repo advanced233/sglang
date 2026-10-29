@@ -13,7 +13,7 @@
   - vLLM `9bc1c8b`（2026-10-28）：`int8_per_token_head` / `int4_per_token_head`（RFC vllm-project/vllm#37319，INT8 合入于 vllm-project/vllm#38378）。Triton 实现，只在 `TRITON_ATTN` 后端上声明支持。
   - LMDeploy TurboMind 的 INT4 / INT8 KV：CUDA 实现，文档写明支持 sm80 / sm86。只作设计参考，不做对照实验。
 - 硬件：
-  - 1×A100-40G（稳定可用，所有主实验都在这张卡上）：HBM 1555 GB/s，BF16 稠密 312 TFLOPS
+  - 1×A100-40G（稳定可用，所有主实验都在这张卡上）：HBM 1555 GB/s，BF16 稠密 312 TFLOPS。实测型号是 A100-PCIE-40GB，功率上限 250 W。驱动是 550，SGLang（CUDA 13）靠环境内的前向兼容库运行（见 `results/a100-40g/20261028-150827/`）
   - 1×A100-80G（共享）：只用于可选项
 - 模型：
   - Qwen3-8B：主力。36 层，32 个 Q head、8 个 KV head，head_dim 128，有 QK-norm。
@@ -59,6 +59,11 @@
 | HiCache | host 传输遇到非 `MXFP8_INTERLEAVED` 布局的 scale 会直接报错，而 per-token scale 用的正是 `TOKEN` 布局 | `srt/mem_cache/pool_host/mha.py:161-169` | 第一版声明不支持（可选 M7） |
 | 已有测试 | 配方单测、Triton attention kernel 测试 | `test/registered/unit/layers/quantization/test_fp4_kv_cache_quant_method.py`、`test/registered/attention/test_triton_attention_kernels.py` | 在这两个文件上扩展 |
 
+> **环境实测补充**（A100-PCIE-40GB，`results/a100-40g/20261028-150827/`）：
+> - `fp8_e4m3` 在 Triton 后端起不来：sm80 上的 Triton 不支持 `fp8e4nv`，只支持 `fp8e4b15` 和 `fp8e5`。FP8 基线改用 `fp8_e5m2`，M0 确认能否启动。
+> - `test_triton_attention_kernels.py` 在基线代码上就有 1 个失败：`test_extend_attention_unified_vs_regular` 的 head_dim=80 子用例，最大差值 0.449。sm80 上这个形状用的分块是 BLOCK_M=128、BLOCK_N=128，H100 和 sm86 都不用这组。本项目的两个模型 head_dim 都是 128，不受影响；但 M3 要改 unified kernel，这个失败要记作基线状态，改完后不能新增失败。
+> - `bench_serving` 的 `random` 数据集要下载 ShareGPT，离线时会失败；改用 `random-ids`。
+
 vLLM 参考实现的位置：
 
 | 内容 | 位置 |
@@ -79,12 +84,17 @@ vLLM 参考实现的位置：
 | KV dtype | 每 (层, KV head) 的 K+V 字节 | 每 token（36 层 × 8 head） | 相对 BF16 的容量 | A100-40G 约可容纳 |
 |---|---:|---:|---:|---:|
 | BF16 | 512 | 144 KiB | 1× | ~13 万 tokens |
-| FP8 e4m3（per-tensor） | 256 | 72 KiB | 2.0× | ~26 万 |
+| FP8（per-tensor，A100 上用 e5m2） | 256 | 72 KiB | 2.0× | ~26 万 |
 | INT8 per-token-head | 264 = 2 × (128 + 4) | 74.3 KiB | 1.94× | ~25 万 |
 | INT4 per-token-head | 136 = 2 × (64 + 4) | 38.3 KiB | 3.76× | ~49 万 |
 | fp4_mx_block16 | 144 = 2 × (64 + 8) | 40.5 KiB | 3.56× | ~47 万 |
 
 可选的容量卖点：Qwen3-14B（40 层、8 个 KV head）BF16 权重约 29.6 GB，40G 卡上 KV 只剩约 6 GiB，约 4 万 tokens；INT4 后约 15 万。
+
+> **环境冒烟实测**（Qwen3-8B，A100-PCIE-40GB）：
+> - SGLang BF16（默认 `--mem-fraction-static 0.823`）：`max_total_num_tokens=121576`，与上表的约 13 万相符。
+> - SGLang `fp4_mx_block16`：默认比例下分配了 432,270 tokens（K、V 各 8.35 GB），但 CUDA graph 捕获时 OOM，原因见 3.3；改成 0.7 后能运行，容量降到 308,468。
+> - vLLM（Triton 后端）的 BF16 / INT8 / INT4：138,560 / 268,736 / 521,344 tokens，比值 1.94× / 3.76×，与上表的字节计算完全一致。
 
 ### 3.2 decode 单步访存与加速上限
 
@@ -109,6 +119,8 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
 - 显存：同一时刻 K、V 两份整层 BF16 临时张量约 1.9 GB，吃掉一部分省下的显存。
 
 如果实测成立，这就是"优化前"的数据；把它接到融合路径（M6）本身就是一个能独立提交的上游修复。
+
+> **显存这一半已经被环境冒烟证实**：`fp4_mx_block16` 在默认显存比例下，decode 的 CUDA graph 捕获时 OOM，那次申请的是 846 MiB。这正好是一层 K 在整个池子（432,271 个槽位 × 8 head × 128 维 × 2 字节 ≈ 844 MiB）上反量化成 BF16 的大小。后果是必须把 `--mem-fraction-static` 降到 0.7 才能运行，容量从 43.2 万降到 30.8 万（−29%）。非融合路径不光慢，还把省下来的显存吃掉了一部分。时间上的代价仍由 M0 测量。
 
 ### 3.4 由此得到的预期
 
@@ -135,12 +147,12 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
 - **环境记录**：GPU 型号与时钟、驱动、CUDA、torch、triton、flashinfer 的版本，SGLang 和 vLLM 的 commit。
 - **基线配置**：Qwen3-8B，分别测：
   - BF16：flashinfer（默认后端）和 triton 各一组；
-  - FP8 e4m3；
-  - `fp4_mx_block16`（triton）。
+  - FP8：`fp8_e5m2`（triton；`fp8_e4m3` 在 sm80 的 Triton 上不支持）；
+  - `fp4_mx_block16`（triton，需要 `--mem-fraction-static 0.7`，见 3.3）。
   - 某个后端起不来，就记下报错，不硬凑。
 - **指标**：
   - 容量：启动日志的 `max_total_num_tokens`。
-  - 吞吐：`python -m sglang.bench_serving --dataset-name random --random-input-len 4096 --random-output-len 256 --random-range-ratio 1 --max-concurrency N`，记录输出吞吐和 TPOT 中位数。
+  - 吞吐：`python -m sglang.bench_serving --dataset-name random-ids --random-input-len 4096 --random-output-len 256 --random-range-ratio 1 --max-concurrency N`，记录输出吞吐和 TPOT 中位数。`random` 数据集要下载 ShareGPT，离线时用不了。
   - 拆分：一次 decode step 的 nsys 记录，按 kernel 拆耗时。
 - **验证 3.3**：固定 batch=1、短上下文，只改 `--max-total-tokens`（池子大小），看 `fp4_mx_block16` 的 decode 单步时间是否随池子大小线性增长，而 BF16 不变。
 - **产出**：`benchmark/kv_lowbit/` 下的启动和压测脚本，以及结果表模板。
@@ -148,7 +160,7 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
 ### M1 离线误差研究（纯 PyTorch，便宜）
 
 - 用 Qwen3-8B 和 Llama-3.1-8B 跑几条真实 prompt，抓下每层写进 cache 的 K/V（RoPE 之后）。
-- 对比几种量化：FP8 e4m3 per-tensor、INT8 per-token-head、不带 RHT 的 INT4、带 RHT 的 INT4、`fp4_mx_block16`。
+- 对比几种量化：FP8 per-tensor（e5m2 和 e4m3 都算，离线误差不受 Triton 限制）、INT8 per-token-head、不带 RHT 的 INT4、带 RHT 的 INT4、`fp4_mx_block16`。
 - 指标：
   - 每层 attention 输出的相对误差；
   - 末层 logits 相对 BF16 的 KL。
@@ -232,7 +244,7 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
 |---|---|
 | BF16，flashinfer | SGLang 的默认配置 |
 | BF16，triton | 同后端基线 |
-| FP8 e4m3 | 现有的 8 bit 方案 |
+| FP8 `fp8_e5m2` | 现有的 8 bit 方案（A100 的 Triton 不支持 e4m3） |
 | INT8 per-token-head（M3） | 本项目 |
 | INT4 per-token-head（M4） | 本项目 |
 | `fp4_mx_block16`：整层反量化（M0）与融合（M6） | 修复前后对比 |
