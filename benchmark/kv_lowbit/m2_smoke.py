@@ -222,6 +222,10 @@ def run_config(args, *, config, gpu_uuid, num_layers):
     return row
 
 
+def _fmt_ms(x):
+    return "-" if x is None else f"{x:.2f}"
+
+
 def write_summary(out):
     rows = [json.loads(x) for x in (out / "runs.jsonl").read_text().splitlines()]
     lines = [
@@ -236,7 +240,7 @@ def write_summary(out):
         lines.append(
             f"| {r['config']} | {r.get('ready')} | {r.get('kv_dtype_logged')} "
             f"| {r.get('kv_bytes_per_token_layer', '-')} | {answer} "
-            f"| {r.get('probe_median_itl_ms', '-')} | {r.get('gsm8k_score', '-')} "
+            f"| {_fmt_ms(r.get('probe_median_itl_ms'))} | {r.get('gsm8k_score', '-')} "
             f"| {r.get('gsm8k_examples', '-')} | {r.get('eval_status', '-')} |"
         )
     gens = {r.get("eval_generation") for r in rows if r.get("eval_generation")}

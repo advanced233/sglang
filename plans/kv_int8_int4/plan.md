@@ -287,7 +287,16 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
 > - 带 checkpoint KV scale 的模型直接报错：Triton 后端读取时还会再乘一次这个 scale。
 > - 与计划的差异：容量不在默认显存比例下验收。非融合读取每次把一整层池子反量化成 BF16，按默认比例分配的池子（约 84 万 token）每层要临时占用约 3.4 GB，放不下。M2 冒烟把池子限制在 10 万 token，只验收字节数和精度；默认比例下的容量放到 M3 验收。
 > - 测试：CPU 单测 2 个（访问规则与存储 dtype、`compute_cell_size` 与实际分配一致），kernel 测试 3 个，池子往返测试 1 个（`test/registered/unit/mem_cache/test_int8_kv_pool.py`）。
-> - 阶段 1 实测（`results/a100-40g/20261029-211615/`）：CPU 测试 29 个、GPU 测试 7 个全部通过；服务能启动，每 token 每层 KV 字节数 INT8 2112、BF16 4098（1.94 倍），17 × 23 两边都答 391。decode 探测和 GSM8K 因为冒烟脚本的两个问题没有跑成（离线时 `random` 数据集要下载 ShareGPT；sgl-eval 带 top_p 采样触发 FlashInfer 采样 kernel 的 JIT，env 里缺 `curand.h`），脚本已改为 `random-ids` 和 `--sampling-backend pytorch`，需要补跑。
+> - 阶段 1 实测（`results/a100-40g/20261029-211615/`）：CPU 测试 29 个、GPU 测试 7 个全部通过；服务能启动，每 token 每层 KV 字节数 INT8 2112、BF16 4098（1.94 倍），17 × 23 两边都答 391。decode 探测和 GSM8K 因为冒烟脚本的两个问题没有跑成（离线时 `random` 数据集要下载 ShareGPT；sgl-eval 带 top_p 采样触发 FlashInfer 采样 kernel 的 JIT，env 里缺 `curand.h`），脚本改为 `random-ids` 和 `--sampling-backend pytorch` 后补跑。
+> - 补跑（`results/a100-40g/20261029-214940/`，池子 10 万 token，sgl-eval 参数 `enable_thinking=false`、temperature 0.7、top_p 0.8，未设 top_k）：
+>
+>   | 配置 | GSM8K（1319 题） | decode 探测 ITL（1k 输入，并发 1） | GSM8K 耗时 |
+>   |---|---:|---:|---:|
+>   | BF16-triton | 93.33% | 13.0 ms | 143 s |
+>   | INT8-triton（非融合） | 92.34% | 30.5 ms | 217 s |
+>
+>   - 精度：差 0.99 分。单次采样评测的标准误约 0.7 分，两次之差约 1.0 分，在噪声范围内，满足验收。
+>   - 速度：每步多出 17.5 ms，正好是整层反量化的量：每步 36 层 × K、V 两份，读 int8、写 BF16，约 22 GB，按 1.3 TB/s 算约 17 ms。相当于每千个池子 token 每步 0.175 ms（`fp4_mx_block16` 用 PyTorch 算子反量化是 1.07 ms，见 3.3）。M3 要消掉的就是这一项。
 
 ### M3 融合 per-token 反量化（核心）
 
