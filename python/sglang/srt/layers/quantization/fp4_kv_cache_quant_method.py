@@ -914,6 +914,115 @@ class FP4MXBlock16KVCacheMethod(KVCacheQuantMethodBase):
         return fp4_size + scale_size + dq_size
 
 
+class Int8PerTokenHeadKVCacheMethod(KVCacheQuantMethodBase):
+    """Symmetric INT8 with one fp32 scale per (token, head).
+
+    Same quantization as vLLM's ``int8_per_token_head``. Data is
+    ``[slots, heads, head_dim]`` int8; scales live in separate ``[slots, heads]``
+    fp32 buffers instead of vLLM's inline page padding.
+    """
+
+    name = "int8_per_token_head"
+
+    def __init__(
+        self,
+        num_layers: Optional[int] = None,
+        device: Optional[str] = None,
+        page_size: Optional[int] = None,
+    ):
+        pass
+
+    def create_buffers(
+        self, size: int, head_num: int, head_dim: int, layer_num: int, device: str
+    ) -> dict:
+        def per_layer(shape, dtype):
+            return [
+                torch.zeros(shape, dtype=dtype, device=device) for _ in range(layer_num)
+            ]
+
+        store_dtype = self.kv_storage_dtype()
+        return {
+            "k_buffer": per_layer((size, head_num, head_dim), store_dtype),
+            "v_buffer": per_layer((size, head_num, head_dim), store_dtype),
+            "k_scale_buffer": per_layer((size, head_num), torch.float32),
+            "v_scale_buffer": per_layer((size, head_num), torch.float32),
+            "dq_k_buffer": None,
+            "dq_v_buffer": None,
+            "store_dtype": store_dtype,
+        }
+
+    def quantize_and_store(
+        self,
+        k_buffer,
+        v_buffer,
+        k_scale_buffer,
+        v_scale_buffer,
+        loc,
+        cache_k,
+        cache_v,
+        k_scale=None,
+        v_scale=None,
+        native_k_scale_buffer=None,
+        native_v_scale_buffer=None,
+    ) -> None:
+        from sglang.kernels.ops.kvcache.int8_per_token_head import (
+            store_int8_per_token_head_kv,
+        )
+
+        # The Triton backend would still apply a checkpoint scale as a descale
+        # on read, so accepting one here would silently double-scale.
+        if k_scale is not None or v_scale is not None:
+            raise NotImplementedError(
+                "int8_per_token_head KV cache does not support checkpoint KV scales."
+            )
+        store_int8_per_token_head_kv(
+            k=cache_k,
+            v=cache_v,
+            loc=loc,
+            k_cache=k_buffer,
+            v_cache=v_buffer,
+            k_scale=k_scale_buffer,
+            v_scale=v_scale_buffer,
+        )
+
+    def dequantize_kv_tensor(
+        self,
+        fp4_tensor: Tensor,
+        scales: Tensor,
+        layer_id: int,
+        dtype: Optional[torch.dtype] = None,
+    ) -> Tensor:
+        from sglang.kernels.ops.kvcache.int8_per_token_head import (
+            dequant_int8_per_token_head,
+        )
+
+        return dequant_int8_per_token_head(
+            data=fp4_tensor,
+            scale=scales,
+            dtype=dtype or self.plain_attention_kv_dtype(),
+        )
+
+    def dequantize_prev_kv(
+        self,
+        k_fp4: Tensor,
+        k_scales: Tensor,
+        v_fp4: Tensor,
+        v_scales: Tensor,
+        layer_id: int,
+    ) -> tuple[Tensor, Tensor]:
+        return (
+            self.dequantize_kv_tensor(k_fp4, k_scales, layer_id),
+            self.dequantize_kv_tensor(v_fp4, v_scales, layer_id),
+        )
+
+    def compute_cell_size(
+        self, head_num: int, head_dim: int, num_layers: int, kv_size: int
+    ) -> int:
+        data_size = head_num * head_dim * num_layers * 2 * kv_size
+        scale_size = head_num * num_layers * 2 * torch.float32.itemsize
+        return data_size + scale_size
+
+
 # Registry: method name -> attention access rules.
 _PREFILL = KVCacheAttentionPhase.PREFILL
 _DECODE = KVCacheAttentionPhase.DECODE
@@ -923,6 +1032,7 @@ _NATIVE_FP4_KIND = KVCacheAttentionAccessKind.NATIVE_FP4
 _ANY_BACKEND = KVCacheBackendMatcher(any_backend=True)
 _NVFP4_SCALE = "nvfp4"
 _FP4_MX_SCALE = "fp4_mx_block16"
+_INT8_PTH_SCALE = "int8_per_token_head"
 _FP8_E4M3 = torch.float8_e4m3fn
 _TORCH_FP4 = getattr(torch, "float4_e2m1fn_x2", None)
 _BF16 = torch.bfloat16
@@ -934,6 +1044,7 @@ _FP4_MX_MHA_BACKENDS = frozenset(
 )
 _FP4_MX_PREFILL_BACKENDS = _FP4_MX_MHA_BACKENDS | frozenset({"fa4"})
 _CPU_FP8_BACKENDS = frozenset({"intel_amx"})
+_INT8_PTH_BACKENDS = frozenset({"triton"})
 
 
 def _backend_matcher(backends) -> KVCacheBackendMatcher:
@@ -947,12 +1058,13 @@ def _plain(
     backends,
     scale: Optional[str] = None,
     attention_dtype: Optional[torch.dtype] = None,
+    storage_dtype: torch.dtype = torch.uint8,
 ) -> KVCacheAttentionAccess:
     return KVCacheAttentionAccess(
         phase,
         _PLAIN_KIND,
         _backend_matcher(backends),
-        storage_dtype=torch.uint8 if scale is not None else None,
+        storage_dtype=storage_dtype if scale is not None else None,
         attention_kv_dtype=attention_dtype,
         scale_recipe=scale,
     )
@@ -1009,6 +1121,22 @@ KV_CACHE_ATTENTION_ACCESS_REGISTRY: dict[str, tuple[KVCacheAttentionAccess, ...]
         _plain(_PREFILL, _FP4_MX_PREFILL_BACKENDS, _FP4_MX_SCALE, _BF16),
         _plain(_DECODE, _FP4_MX_MHA_BACKENDS, _FP4_MX_SCALE, _BF16),
     ),
+    Int8PerTokenHeadKVCacheMethod.name: (
+        _plain(
+            _PREFILL,
+            _INT8_PTH_BACKENDS,
+            _INT8_PTH_SCALE,
+            _BF16,
+            storage_dtype=torch.int8,
+        ),
+        _plain(
+            _DECODE,
+            _INT8_PTH_BACKENDS,
+            _INT8_PTH_SCALE,
+            _BF16,
+            storage_dtype=torch.int8,
+        ),
+    ),
 }
 
 
@@ -1017,11 +1145,12 @@ KV_CACHE_QUANT_REGISTRY: dict[str, type[KVCacheQuantMethodBase]] = {
     "cpu_fp8_e4m3": CPUFP8KVCacheMethod,
     "nvfp4": NVFP4KVCacheMethod,
     "fp4_mx_block16": FP4MXBlock16KVCacheMethod,
+    "int8_per_token_head": Int8PerTokenHeadKVCacheMethod,
 }
 
 
 def resolve_kv_cache_quant(kv_cache_dtype) -> Optional[str]:
-    """Resolve the explicit FP4 KV cache recipe from ``--kv-cache-dtype``."""
+    """Resolve the explicit low-bit KV cache recipe from ``--kv-cache-dtype``."""
 
     if not isinstance(kv_cache_dtype, str):
         if (

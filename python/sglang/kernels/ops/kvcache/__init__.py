@@ -64,6 +64,8 @@ _TRITON_KERNELS = [
     ("cache_move", "copy_all_layer_kv_cache_tiled"),
     ("mla_buffer", "set_mla_kv_buffer_triton"),
     ("mla_buffer", "get_mla_kv_buffer_triton"),
+    ("int8_per_token_head", "store_int8_per_token_head_kv"),
+    ("int8_per_token_head", "dequant_int8_per_token_head"),
 ]
 for _mod, _fn in _TRITON_KERNELS:
     register_kernel(

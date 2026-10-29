@@ -497,7 +497,7 @@ class DefaultPoolConfigurator(MemoryPoolConfigurator):
                 * kv_size
             )
 
-            if is_float4_e2m1fn_x2(kv_cache_dtype):
+            if is_float4_e2m1fn_x2(kv_cache_dtype) or kv_cache_dtype == torch.int8:
                 from sglang.srt.layers.quantization.fp4_kv_cache_quant_method import (
                     get_kv_cache_quant_method,
                     resolve_kv_cache_quant,
@@ -506,7 +506,8 @@ class DefaultPoolConfigurator(MemoryPoolConfigurator):
                 quant_name = resolve_kv_cache_quant(kvc.kv_cache_dtype_str)
                 if quant_name is None:
                     raise ValueError(
-                        "FP4 storage dtype requires an explicit KV recipe name."
+                        f"KV storage dtype {kv_cache_dtype} requires an explicit "
+                        "KV recipe name."
                     )
                 quant_method = get_kv_cache_quant_method(
                     quant_name,

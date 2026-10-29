@@ -204,7 +204,9 @@ class Model(msgspec.Struct):
                 'by the FA4 backend. "nvfp4" selects '
                 'the NVFP4 FP4 E2M1 KV cache recipe; "fp4_mx_block16" '
                 "selects the MX-style block-size-16 FP4 E2M1 KV cache "
-                "recipe. Both require CUDA 12.8+ and PyTorch 2.8.0+"
+                "recipe. Both require CUDA 12.8+ and PyTorch 2.8.0+. "
+                '"int8_per_token_head" stores INT8 with one scale per token and '
+                "head; it requires --attention-backend triton"
             ),
             choices=[
                 "auto",
@@ -215,6 +217,7 @@ class Model(msgspec.Struct):
                 "bfloat16",
                 "nvfp4",
                 "fp4_mx_block16",
+                "int8_per_token_head",
             ],
             resolvable=True,
         ),

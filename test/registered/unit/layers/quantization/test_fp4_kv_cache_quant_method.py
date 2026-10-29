@@ -436,5 +436,47 @@ class TestFP4MXBlock16KVQuantizeUtil(CustomTestCase):
         self.assertLess(rel_error, 0.5)
 
 
+class TestInt8PerTokenHeadKVCacheMethod(CustomTestCase):
+    def test_storage_and_access_contract(self):
+        """The pool, the store kernel and the hook all rely on these together."""
+        from sglang.srt.layers.quantization.fp4_kv_cache_quant_method import (
+            KVCacheAttentionAccessKind,
+            get_kv_cache_quant_method,
+            resolve_kv_cache_quant,
+        )
+
+        name = resolve_kv_cache_quant("int8_per_token_head")
+        m = get_kv_cache_quant_method(name)
+        self.assertEqual(m.kv_storage_dtype(), torch.int8)
+        self.assertTrue(m.needs_plain_kv_dequant_read())
+        self.assertFalse(m.needs_dequant_workspace())
+        self.assertEqual(m.plain_attention_kv_dtype(), torch.bfloat16)
+        for phase in ("prefill", "decode"):
+            self.assertEqual(
+                m.resolve_attention_access(phase, "triton").kind,
+                KVCacheAttentionAccessKind.PLAIN,
+            )
+            self.assertIsNone(m.resolve_attention_access(phase, "flashinfer"))
+
+    def test_cell_size_matches_allocation(self):
+        """Capacity planning must count exactly the bytes create_buffers allocates."""
+        from sglang.srt.layers.quantization.fp4_kv_cache_quant_method import (
+            Int8PerTokenHeadKVCacheMethod,
+        )
+
+        m = Int8PerTokenHeadKVCacheMethod()
+        size, heads, dim, layers = 16, 8, 128, 3
+        bufs = m.create_buffers(size, heads, dim, layers, "cpu")
+        allocated = sum(
+            t.numel() * t.element_size()
+            for key in ("k_buffer", "v_buffer", "k_scale_buffer", "v_scale_buffer")
+            for t in bufs[key]
+        )
+        kv_size = torch.int8.itemsize
+        self.assertEqual(
+            allocated, size * m.compute_cell_size(heads, dim, layers, kv_size)
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

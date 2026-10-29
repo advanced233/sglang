@@ -109,6 +109,40 @@ def handle_mxfp8_kv_cache_compatibility(server_args: Any) -> None:
         )
 
 
+def handle_int8_kv_cache_compatibility(server_args: Any) -> None:
+    """INT8 per-token-head KV cache: CUDA, MHA, Triton attention, plain pool."""
+    cfg = resolving_view(server_args)
+    if cfg.kv_cache_dtype != "int8_per_token_head":
+        return
+    if not get_platform().is_cuda:
+        raise ValueError("--kv-cache-dtype int8_per_token_head requires CUDA.")
+    if use_mla_backend(server_args):
+        raise ValueError(
+            "--kv-cache-dtype int8_per_token_head does not support MLA models."
+        )
+    prefill_backend, decode_backend = attention_backends_of(resolved_view(server_args))
+    if (prefill_backend, decode_backend) != ("triton", "triton"):
+        raise ValueError(
+            "--kv-cache-dtype int8_per_token_head requires --attention-backend "
+            f"triton; got prefill={prefill_backend}, decode={decode_backend}."
+        )
+    # The host, transfer, and unified pools copy KV rows without the separate
+    # per-token scale buffers.
+    unsupported = {
+        "--enable-hierarchical-cache": cfg.enable_hierarchical_cache,
+        "--enable-lmcache": cfg.enable_lmcache,
+        "--enable-unified-memory": cfg.enable_unified_memory,
+        "--disaggregation-mode": cfg.disaggregation_mode != "null",
+        "--speculative-algorithm": cfg.speculative_algorithm is not None,
+    }
+    used = [flag for flag, enabled in unsupported.items() if enabled]
+    if used:
+        raise ValueError(
+            "--kv-cache-dtype int8_per_token_head does not yet support "
+            f"{', '.join(used)}."
+        )
+
+
 def handle_kv4_compatibility(server_args: Any) -> None:
     """Check FP4 KV cache compatibility with the attention backend"""
 
@@ -882,11 +916,11 @@ def validate_prefill_only_disable_kv_cache_args(server_args: Any):
             "Other prefill-only workloads may be supported in a future change once "
             "their attention paths stop reading or writing the paged KV cache."
         )
-    if cfg.kv_cache_dtype in ("nvfp4", "fp4_mx_block16"):
+    if cfg.kv_cache_dtype in ("nvfp4", "fp4_mx_block16", "int8_per_token_head"):
         raise ValueError(
             "--prefill-only-disable-kv-cache does not currently support "
-            "--kv-cache-dtype=nvfp4 or --kv-cache-dtype=fp4_mx_block16 because "
-            "the FP4 pool uses a separate allocation path."
+            "--kv-cache-dtype=nvfp4, fp4_mx_block16, or int8_per_token_head "
+            "because those pools use a separate allocation path."
         )
     if cfg.kv_cache_dtype == "mxfp8":
         raise ValueError(
