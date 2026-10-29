@@ -159,6 +159,31 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
 - **功耗**：全程没有热降频（最高 83°C，降频阈值 92°C）。250 W 的功耗上限在 58–97% 的采样里生效，SM 时钟中位数 1185–1380 MHz（最高 1410）。
 - **vLLM 数据的两个干扰**：vLLM 只收文本，输入长度不精确；它默认把 prefill 和 decode 混在同一步里。但 INT8、INT4 都慢，prefill 也慢（TTFT 是 BF16 的 1.4–2 倍），方向一致。
 
+### 3.6 阶段 1 实测：kernel 诊断（M3.0）
+
+数据在 `results/a100-40g/20261029-211615/m3diag/`。形状同 3.5（6 条序列 × 16k，32 / 8 个 head，head_dim 128），单个 attention 调用，CUDA graph 重放、冷 L2，SM 时钟 1410 MHz。
+
+| 配置 | KV 字节 | 时间 | 带宽 | 占 ref-sum | 对比 SGLang BF16 |
+|---|---:|---:|---:|---:|---:|
+| `ref-sum`（同样字节数的求和） | 403 MB | 307 us | 1311 GB/s | 100% | — |
+| SGLang BF16 | 403 MB | 316 us | 1273 GB/s | 97% | 1.00× |
+| SGLang `fp8_e5m2` | 201 MB | 230 us | 874 GB/s | 67% | 1.37× |
+| vLLM BF16（tile 16 / 32） | 403 MB | 344 / 317 us | 1170 / 1268 GB/s | 89% / 97% | 0.92× / 1.00× |
+| vLLM INT8（tile 16 / 32 / 64） | 208 MB | 690 / 608 / 558 us | 301 / 341 / 372 GB/s | 23–28% | 0.46–0.57× |
+| vLLM INT8，scale 分开存（tile 16 / 64） | 208 MB | 353 / 276 us | 588 / 751 GB/s | 45% / 57% | 0.90× / 1.14× |
+| vLLM INT4（tile 16 / 64） | 107 MB | 688 / 429 us | 155 / 249 GB/s | 12% / 19% | 0.46× / 0.74× |
+
+- **实际带宽上限是 1311 GB/s**（峰值的 84%）。SGLang 的 BF16 kernel 已经到了它的 97%。
+- **最大的原因是 scale 内联在 page 里**：每行 264 B，Triton 推断不出对齐，K/V 只能一个字节一个字节地读（SASS 里每次调用约 630 万条 `LDG.E.U8`）。把 scale 分开存，数据就变成 `cp.async` 的 8 / 16 字节加载，时间从 690 us 降到 353 us（快 1.95 倍）。
+- **tile 是第二个原因**：16 → 64 再快 1.28 倍（scale 分开存时 353 → 276 us）。两项合起来 2.5 倍，INT8 第一次比 BF16 快（1.14 倍）。
+- **剩下的瓶颈是指令，不是显存**：
+  - ncu 把 SM 时钟锁在 765 MHz 时，SGLang BF16 的耗时不变（318 us，访存瓶颈）；vLLM INT8 scale 分开存 + tile 64 从 276 us 涨到 457 us，几乎随 SM 时钟同比变化。
+  - 这个 kernel 每次调用执行 5600 万条 warp 指令，SGLang BF16 是 2660 万。最多的是 `PRMT`（18%）、`I2F.S8`（11%，每个元素一条 int8 → 浮点转换）和 `LDS.U8`（6%，从共享内存按字节读回）。DRAM 吞吐只有 30%，occupancy 11%（每线程 197 个寄存器）。
+- **INT8 的目标**：显存下限是 208 MB ÷ 1311 GB/s = 158 us。做到 200 us 以内，就比 BF16 快 1.6 倍；放到服务里，16k、并发 6 的 ITL 约从 23.6 ms 降到 18–19 ms。
+- **`fp8_e5m2` 也受转换限制**：它的转换只是移位，但同样有 `PRMT` 和 `LDS.U8`，只到 ref-sum 的 67%。INT8 只多 3% 的字节，转换做好就能比它快。
+- **INT4 的问题更多**：同样是按字节读（`LDG.E.U8`、`I2F.U16`）；另外 RHT 是每次调用十几个独立的小 kernel（Q 的旋转和输出的逆旋转，每个 5–10 us）。M4 必须把 RHT 融进 kernel。
+- vLLM 自己的 BF16 在 A100 上也吃了 tile 16 的亏（344 vs 317 us）。
+
 ## 4. 实现内容
 
 每个模块按"做什么 / 涉及位置 / 验收 / 测试"组织。测试遵循仓库自己的规则：
@@ -261,7 +286,8 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
 > - 兼容性检查是新的 `handle_int8_kv_cache_compatibility`：只允许 CUDA、MHA、prefill 和 decode 都是 `triton`；拒绝 HiCache、LMCache、unified memory、PD 分离和投机解码。池子的构建入口另外拒绝 MLA、SWA、Mamba 混合、page-major 等非普通 MHA 池子。
 > - 带 checkpoint KV scale 的模型直接报错：Triton 后端读取时还会再乘一次这个 scale。
 > - 与计划的差异：容量不在默认显存比例下验收。非融合读取每次把一整层池子反量化成 BF16，按默认比例分配的池子（约 84 万 token）每层要临时占用约 3.4 GB，放不下。M2 冒烟把池子限制在 10 万 token，只验收字节数和精度；默认比例下的容量放到 M3 验收。
-> - 测试：CPU 单测 2 个（访问规则与存储 dtype、`compute_cell_size` 与实际分配一致），kernel 测试 3 个，池子往返测试 1 个（`test/registered/unit/mem_cache/test_int8_kv_pool.py`）。CPU 单测已在本地通过；kernel 和池子测试在 Triton 解释器下通过（GPU 上待验证）。
+> - 测试：CPU 单测 2 个（访问规则与存储 dtype、`compute_cell_size` 与实际分配一致），kernel 测试 3 个，池子往返测试 1 个（`test/registered/unit/mem_cache/test_int8_kv_pool.py`）。
+> - 阶段 1 实测（`results/a100-40g/20261029-211615/`）：CPU 测试 29 个、GPU 测试 7 个全部通过；服务能启动，每 token 每层 KV 字节数 INT8 2112、BF16 4098（1.94 倍），17 × 23 两边都答 391。decode 探测和 GSM8K 因为冒烟脚本的两个问题没有跑成（离线时 `random` 数据集要下载 ShareGPT；sgl-eval 带 top_p 采样触发 FlashInfer 采样 kernel 的 JIT，env 里缺 `curand.h`），脚本已改为 `random-ids` 和 `--sampling-backend pytorch`，需要补跑。
 
 ### M3 融合 per-token 反量化（核心）
 
@@ -272,11 +298,16 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
 - 用 ncu 看显存吞吐百分比、load 指令宽度、warp 停顿原因，确认 3.5 里哪个原因占大头。
 - 脚本：`benchmark/kv_lowbit/m3_kernel_diag.py`。
 
-**设计杠杆**（按 M3.0 的结果取舍）：
-- tile 按字节选，而不是按 token 个数：int8 一块 64–128 个 token，加 2–3 级流水；保留 SGLang 现有的 split-KV 和 GQA 分组。
-- 数据和 scale 分开存（`KVScaleLayout.TOKEN`），每行 128 B 对齐，用 128 位 load。
-- K 的 scale 乘在点积之后，V 的 scale 并进 P。
-- 便宜的转换：int8 转 fp16 用魔数位运算（Marlin / FasterTransformer 的做法），QK 点积改用 fp16（bf16 的尾数装不下 8 位整数）。更激进的选项是把 Q 量化成 int8，直接用 INT8 tensor core 算 QK。
+**设计**（由 3.6 确定，按顺序做，每一步都用 `m3_kernel_diag.py` 的同一形状加一个 `sglang-int8` 配置来量）：
+1. **布局**：沿用 M2 的池子，数据 `[槽位, head, dim]` int8、scale `[槽位, head]` fp32 分开存，每行 128 B 对齐。这一项在 vLLM 上值 1.95 倍，M2 已经做好了。
+2. **tile**：`BLOCK_N` 从 32 改成 64，保留 2 级流水、split-KV 和 GQA 分组。
+3. **便宜的转换**（剩下的瓶颈）：
+   - int8 → fp16 用魔数位运算（FasterTransformer / Marlin 的做法）：`tl.inline_asm_elementwise(pack=4)`，一个 32 位寄存器里的 4 个 int8 用 `prmt` + `sub.f16x2` 变成 2 个 `half2`，大约每个元素一条指令。现在是 `I2F` + `PRMT` + `LDS.U8` 每个元素三条左右。
+   - QK 和 PV 的点积改用 fp16：Q 在进循环前转一次 fp16。bf16 的尾数装不下 8 位整数，所以不能留在 bf16。
+   - K 的 scale 乘在点积之后：`qk *= sm_scale * ks[None, :]`。
+   - V 的 scale 并进 P 时先除以这一块 scale 的最大值，点积后再乘回去，免得 `P × scale` 在 fp16 里变成非规格化数。
+4. **备选**：如果第 3 步之后仍然受指令限制，把 Q 按 head 量化成 int8，用 INT8 tensor core 直接算 QK，K 完全不用转换（SageAttention 的做法，需要额外评估精度）。
+5. **调参**：`num_warps`、`num_stages`、`BLOCK_N` 各扫一遍；看 ncu 的寄存器数和 occupancy，目标是 DRAM 吞吐 ≥ 75%。
 
 1. **新的访问方式**：在 `KVCacheAttentionAccessKind` 里新增一种（名字和形状要和维护者商量），让池子把原始的 int8 buffer 和 scale buffer 直接交给后端，不再走整层反量化。
    - 这是 API 改动。实现之前先在上游开一个 RFC issue，说明动机：Ampere 上没有低比特 KV，而 `fp4_mx_block16` 在 Triton 后端上是整层反量化。

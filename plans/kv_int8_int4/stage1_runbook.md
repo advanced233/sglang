@@ -91,7 +91,7 @@ python benchmark/kv_lowbit/m3_kernel_diag.py run --gpu $GPU --configs vllm-int4,
 kvq_env sgleval && sgl-eval run --help | grep -E -- "--(temperature|top-p|top-k|chat-template-kwarg|num-examples)" ; kvq_env sglang
 ```
 
-脚本默认传给 sgl-eval 的参数是 `--chat-template-kwarg enable_thinking=false --temperature 0.7 --top-p 0.8 --top-k 20`（Qwen3 非思考模式的推荐值）。如果 `--help` 里的写法不同，用 `--eval-args "<改好的参数>"` 传入，并在回报里写明。
+脚本默认传给 sgl-eval 的参数是 `--chat-template-kwarg enable_thinking=false --temperature 0.7 --top-p 0.8`（Qwen3 非思考模式的推荐值；sgl-eval 0.1.3 没有 `--top-k`）。如果 `--help` 里的写法不同，用 `--eval-args "<改好的参数>"` 传入，并在回报里写明。
 
 ```bash
 python benchmark/kv_lowbit/m2_smoke.py --model "$QWEN3_8B" --gpu $GPU \
@@ -99,7 +99,7 @@ python benchmark/kv_lowbit/m2_smoke.py --model "$QWEN3_8B" --gpu $GPU \
 ```
 
 脚本做的事，对 BF16 和 INT8 各一遍：
-- 起服务：`--attention-backend triton --max-total-tokens 100000`，INT8 另加 `--kv-cache-dtype int8_per_token_head`。
+- 起服务：`--attention-backend triton --sampling-backend pytorch --max-total-tokens 100000`，INT8 另加 `--kv-cache-dtype int8_per_token_head`。用 pytorch 采样是因为 FlashInfer 的采样 kernel 要 JIT 编译，env 里缺 `curand.h`。
   - 池子限制在 10 万 token，是因为 INT8 现在的读取方式会把一整层的池子反量化成 BF16；按默认显存比例分配的池子，这份临时拷贝放不下（`plan.md` M2）。
 - 从服务日志读出 KV 实际分配的字节数，换算成"每 token 每层字节数"。预期 BF16 约 4096，INT8 约 2112。
 - 发一条短请求（17 × 23），答案应为 391。

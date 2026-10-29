@@ -82,3 +82,20 @@
 | vllm-int4-t64 | at::native::vectorized_elementwise_kernel | 24 | 5.4 | 1 | 0 | 66 | 0 | 6 | 28 | 16.0 | imc_miss 24.4, long_scoreboard 16.6, wait 2.2, drain 1.3 |
 | vllm-int4-t64 | at::native::vectorized_elementwise_kernel | 24 | 5.2 | 1 | 0 | 57 | 0 | 5 | 28 | 16.0 | imc_miss 24.4, long_scoreboard 20.0, wait 2.4, drain 1.0 |
 
+## Main-kernel instruction mix (SASS)
+
+| config | kernel | warp instructions | global loads by opcode | top opcodes (share of executed) |
+|---|---|---:|---|---|
+| ref-sum | reduce_kernel | 22,947,104 | LDG.E 48, LDG.E.128 786,432 | FADD 29%, PRMT 28%, BRA 6%, IADD3 4%, ISETP.GE.U32.AND 4%, LEA 4%, IMAD.WIDE.U32 4%, LDG.E.128 3%, ISETP.NE.AND 2%, MOV 2% |
+| sglang-bf16 | _fwd_grouped_kernel_stage1 | 26,559,744 | LDG.E 4,608, LDG.E.128 1,536, LDG.E.64 798,720, LDGDEPBAR 199,680, LDGSTS.E.BYPASS.128 798,720 | FMUL 13%, IMAD 6%, HMMA.16816.F32.BF16 6%, FADD 6%, LDSM.16.M88.4 5%, SHFL.BFLY 5%, IADD3 4%, NOP 4%, FMNMX 3%, LEA 3% |
+| sglang-fp8e5m2 | _fwd_grouped_kernel_stage1 | 39,660,288 | LDG.E 4,608, LDG.E.128 1,536, LDG.E.64 599,040, LDGDEPBAR 199,680, LDGSTS.E.64 399,360, LDGSTS.E.BYPASS.128 199,680 | PRMT 15%, IMAD.MOV.U32 14%, FMUL 8%, LDS.U8 8%, LDS.64 5%, HMMA.16816.F32 4%, FADD 4%, SHFL.BFLY 3%, IADD3 3%, IMAD 3% |
+| vllm-bf16 | kernel_unified_attention | 54,996,992 | LDG.E 20,480, LDG.E.128 6,144, LDGDEPBAR 804,864, LDGSTS.E 405,504, LDGSTS.E.BYPASS.128 798,720 | FMUL 12%, IMAD 6%, LDS 6%, IMAD.IADD 5%, LDSM.16.M88.4 5%, FADD 5%, HMMA.16816.F32.BF16 4%, SHF.R.S32.HI 4%, FSEL 4%, SHFL.BFLY 4% |
+| vllm-bf16-t32 | kernel_unified_attention | 39,299,072 | LDG.E 20,480, LDG.E.128 6,144, LDGDEPBAR 411,648, LDGSTS.E 208,896, LDGSTS.E.BYPASS.128 811,008 | FMUL 9%, IMAD 8%, IMAD.IADD 6%, LDS 5%, SHF.R.S32.HI 5%, LEA 5%, IMAD.WIDE.U32 4%, LEA.HI.X 4%, HMMA.16816.F32.BF16 4%, LDSM.16.M88.4 4% |
+| vllm-int8 | kernel_unified_attention | 160,679,936 | LDG.E 413,696, LDG.E.128 6,144, LDG.E.U8 6,291,456, LDGDEPBAR 602,112, LDGSTS.E 602,112 | PRMT 18%, IMAD.MOV.U32 7%, I2F.S8 6%, FMUL 5%, USHF.R.S32.HI 4%, UIADD3 4%, UIMAD 4%, LDG.E.U8 4%, IADD3 3%, IMAD.WIDE.U32 3% |
+| vllm-int8-t32 | kernel_unified_attention | 138,733,568 | LDG.E 217,088, LDG.E.128 6,144, LDG.E.U8 6,291,456, LDGDEPBAR 307,200, LDGSTS.E 307,200 | PRMT 21%, IMAD 10%, IMAD.IADD 7%, ISETP.GE.AND 5%, SHF.R.S32.HI 5%, IMAD.WIDE.U32 5%, LDG.E.U8 5%, STS.U8 5%, I2F.S8 5%, IMAD.MOV.U32 3% |
+| vllm-int8-t64 | kernel_unified_attention | 134,063,616 | LDG.E 217,088, LDG.E.128 6,144, LDG.E.U8 6,291,456, LDGDEPBAR 159,744, LDGSTS.E 159,744 | PRMT 22%, IMAD 10%, IMAD.IADD 7%, LOP3.LUT 5%, IMAD.WIDE.U32 5%, SHF.R.S32.HI 5%, ISETP.GE.AND 5%, LDG.E.U8 5%, STS.U8 5%, I2F.S8 5% |
+| vllm-int8-sep | kernel_unified_attention | 100,468,736 | LDG.E 20,480, LDG.E.128 6,144, LDGDEPBAR 1,406,976, LDGSTS.E 1,007,616, LDGSTS.E.64 399,360, LDGSTS.E.BYPASS.128 199,680 | PRMT 14%, IMAD.MOV.U32 10%, I2F.S8 9%, FMUL 8%, LDS.64 4%, IMAD 4%, IMAD.IADD 3%, LDS.U8 3%, LDS 3%, FSEL 3% |
+| vllm-int8-sep-t64 | kernel_unified_attention | 56,148,992 | LDG.E 20,480, LDG.E.128 6,144, LDGDEPBAR 374,784, LDGSTS.E 270,336, LDGSTS.E.64 417,792, LDGSTS.E.BYPASS.128 208,896 | PRMT 18%, I2F.S8 11%, IMAD.MOV.U32 8%, LDS.U8 6%, IMAD 5%, FMUL 5%, IMAD.IADD 4%, SHF.R.S32.HI 4%, HMMA.16816.F32.BF16 3%, IMAD.WIDE.U32 3% |
+| vllm-int4 | _attn_packed | 147,559,424 | LDG.E 217,088, LDG.E.U16 49,152, LDG.E.U8 3,145,728, LDGDEPBAR 602,112, LDGSTS.E 602,112 | PRMT 11%, IMAD.MOV.U32 10%, I2F.U16 6%, IMAD 6%, LOP3.LUT 6%, FADD 5%, IMAD.IADD 4%, FFMA 4%, FMUL 3%, SHF.R.S32.HI 3% |
+| vllm-int4-t64 | _attn_packed | 97,761,280 | LDG.E 217,088, LDG.E.U16 49,152, LDG.E.U8 3,145,728, LDGDEPBAR 159,744, LDGSTS.E 159,744 | PRMT 13%, IMAD.MOV.U32 8%, IMAD 8%, LOP3.LUT 8%, I2F.U16 6%, IMAD.IADD 6%, SHF.R.S32.HI 4%, SHF.R.U32.HI 4%, IMAD.WIDE.U32 4%, LDG.E.U8 3% |
+

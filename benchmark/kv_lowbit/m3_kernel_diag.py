@@ -785,14 +785,16 @@ def _ncu_raw(path):
 def _sass_mix(path):
     """Warp-level executed instructions per opcode for the main kernel."""
     rows = _csv_rows(path)
-    if not rows:
+    # A "Kernel Name" line precedes the column header.
+    starts = [i for i, r in enumerate(rows) if r[:2] == ["Address", "Source"]]
+    if not starts:
         return {}
-    head = rows[0]
-    if "Source" not in head or "Instructions Executed" not in head:
+    head = rows[starts[0]]
+    if "Instructions Executed" not in head:
         return {}
     i_src, i_exec = head.index("Source"), head.index("Instructions Executed")
     mix = {}
-    for r in rows[1:]:
+    for r in rows[starts[0] + 1 :]:
         if len(r) <= max(i_src, i_exec) or r[i_src] == "Source":
             continue
         tokens = [t for t in r[i_src].split() if not t.startswith("@")]

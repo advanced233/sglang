@@ -41,10 +41,9 @@ CONFIGS = {
     "bf16-triton": [],
     "int8-triton": ["--kv-cache-dtype", "int8_per_token_head"],
 }
-# Qwen3 non-thinking sampling recommendation; spelled as sgl-eval 0.1.3 flags.
+# Qwen3 non-thinking sampling recommendation; sgl-eval 0.1.3 has no --top-k flag.
 DEFAULT_EVAL_ARGS = (
-    "--chat-template-kwarg enable_thinking=false "
-    "--temperature 0.7 --top-p 0.8 --top-k 20"
+    "--chat-template-kwarg enable_thinking=false --temperature 0.7 --top-p 0.8"
 )
 
 
@@ -70,6 +69,10 @@ def _server_cmd(*, args, config, port):
         "42",
         "--attention-backend",
         "triton",
+        # FlashInfer's sampling kernels JIT-compile against curand.h, which the
+        # env's nvcc package does not ship; sgl-eval samples with top_p.
+        "--sampling-backend",
+        "pytorch",
         "--max-total-tokens",
         str(args.max_total_tokens),
         *CONFIGS[config],
@@ -134,7 +137,8 @@ def _decode_probe(*, args, port, tag):
         "--model",
         args.model,
         "--dataset-name",
-        "random",
+        "random-ids",
+        "--tokenize-prompt",
         "--random-input-len",
         "1024",
         "--random-output-len",
