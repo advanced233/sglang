@@ -142,27 +142,28 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
 - kernel 计时：`.claude/rules/kernel-benchmark.md`，要在冷 L2 下测。
 - 精度评测：`.claude/rules/prefer-sgl-eval.md`，用 `sgl-eval`（`python/pyproject.toml` 里锁定为 0.1.3）。
 
-### M0 测量基建与基线
+### M0 测量基建与服务探测
 
-- **环境记录**：GPU 型号与时钟、驱动、CUDA、torch、triton、flashinfer 的版本，SGLang 和 vLLM 的 commit。
-- **基线配置**：Qwen3-8B，分别测：
-  - BF16：flashinfer（默认后端）和 triton 各一组；
-  - FP8：`fp8_e5m2`（triton；`fp8_e4m3` 在 sm80 的 Triton 上不支持）；
-  - `fp4_mx_block16`（triton，需要 `--mem-fraction-static 0.7`，见 3.3）。
-  - 某个后端起不来，就记下报错，不硬凑。
-- **指标**：
-  - 容量：启动日志的 `max_total_num_tokens`。
-  - 吞吐：`python -m sglang.bench_serving --dataset-name random-ids --random-input-len 4096 --random-output-len 256 --random-range-ratio 1 --max-concurrency N`，记录输出吞吐和 TPOT 中位数。`random` 数据集要下载 ShareGPT，离线时用不了。
-  - 拆分：16k 上下文、6 个请求的 decode，用 torch profiler 采 5 步，再用仓库自带的 `llm-torch-profiler-analysis` 脚本按 kernel 拆耗时。
-- **验证 3.3**：固定 batch=1、短上下文，只改 `--max-total-tokens`（池子大小），看 `fp4_mx_block16` 的 decode 单步时间是否随池子大小线性增长，而 BF16 不变。
-- **vLLM 参考**：vLLM 的 BF16 / INT8 / INT4（`TRITON_ATTN`）跑同样的扫描，提前知道 A100 上 Triton 实现能做到多快，作为 M3 的目标。
-- **并发上限 32**：SGLang 在这张卡上默认只给 batch ≤ 32 捕获 decode CUDA graph，更大的 batch 会退回 eager，不可比。所以"最大并发"取 min(32, 容量 ÷ 单请求 token 数)。容量的优势在 16k / 32k 上下文下体现：那里能同时放下的请求数本来就小于 32。
-- **产出**：`benchmark/kv_lowbit/m0_bench.py`（驱动）和 `m0_report.py`（汇总表），执行步骤见 [`phase0_runbook.md`](phase0_runbook.md)。
+阶段 0 只测写 kernel 之前必须知道的事；最终结果表的完整曲线在 M5 用最终代码重测（到时代码基线变了，现在测的曲线拼不进去）。每项测量都对应一个后续决定：
+
+| 问题 | 影响的决定 | 测量 |
+|---|---|---|
+| Q1：FP4 整层反量化的时间代价，是否随池子大小线性增长 | M6 的优先级与"修复前"数据 | FP4 在默认池子（约 30.8 万）和 4 万池子下各做一次 decode 探测（1k 输入、并发 1）；BF16 一个对照点 |
+| Q2：融合的 per-token-head INT8 / INT4 Triton kernel 在 A100 上比 BF16 快多少，INT4 是提速还是只扩容 | M3 的目标与预期 | vLLM BF16 / INT8 / INT4 在 16k 输入下：并发 6（同 batch 比单步速度）和各自最大并发（容量换吞吐） |
+| Q3：SGLang BF16 的 triton 比默认 flashinfer 慢多少 | 最终对比按同后端讲还是按默认配置讲 | 两种后端，同样两个点 |
+| Q4：decode 时间花在哪 | 校准 3.2 的 roofline 模型 | BF16-triton 一次 decode profile（16k 上下文、6 个请求、5 步） |
+| Q5：`fp8_e5m2` 能否运行、容量多少 | 确认 FP8 基线可用 | 启动一次加两个点 |
+
+- **配置**：Qwen3-8B；SGLang 的 BF16（flashinfer、triton）、`fp8_e5m2`（triton；`fp8_e4m3` 在 sm80 的 Triton 上不支持）、`fp4_mx_block16`（triton，需要 `--mem-fraction-static 0.7`，见 3.3）；vLLM 的 BF16 / INT8 / INT4（`TRITON_ATTN`）。
+- **压测**：`sglang.bench_serving` 的 `random-ids` 数据集（`random` 要下载 ShareGPT，离线用不了），输出 256，记录输出吞吐和 TPOT 中位数。容量取启动日志。
+- **并发 6 与上限 32**：16k 输入下 SGLang BF16 最多放 7 个请求，6 是所有配置都放得下的最大值。SGLang 在这张卡上默认只给 batch ≤ 32 捕获 decode CUDA graph，所以"最大并发"取 min(32, 容量 ÷ 单请求 token 数)。
+- **不在阶段 0 做的**：4k / 32k 和其他并发的曲线（M5 重测，中间值用 roofline 模型推算）；池子大小的更多点（机理由代码决定是线性的，两点定斜率）；FP4 的 profile（M6 修复前后各做一次）。
+- 共 8 次服务启动、约 17 次压测，约 40 分钟。脚本是 `benchmark/kv_lowbit/m0_bench.py`（驱动）和 `m0_report.py`（汇总表），执行步骤见 [`phase0_runbook.md`](phase0_runbook.md)。
 
 ### M1 离线误差研究（纯 PyTorch，便宜）
 
-- 用 Qwen3-8B 和 Llama-3.1-8B 在真实文本窗口上做实验。文本取仓库 `docs/docs` 下的文档，离线可用。
-  - 先 prefill 一段前缀（4k / 16k），把 cache 里的 K/V（RoPE 之后）替换成"量化再反量化"的值。
+- 用 Qwen3-8B 和 Llama-3.1-8B 在真实文本窗口上做实验（Llama 只跑 4k 前缀，只用来回答下面的问题 3）。文本取仓库 `docs/docs` 下的文档，离线可用。
+  - 先 prefill 一段前缀（4k 用 8 个窗口，16k 用 4 个），把 cache 里的 K/V（RoPE 之后）替换成"量化再反量化"的值。
   - 再对后面 128 个真实 token 打分。
 - 对比几种量化：FP8 per-tensor（e5m2 和 e4m3 都算，离线误差不受 Triton 限制）、INT8 per-token-head、不带 RHT 的 INT4、带 RHT 的 INT4、`fp4_mx_block16`。参考实现在 `benchmark/kv_lowbit/kvq_ref.py`，INT8 / INT4 的取整、zero-point 和 RHT 都与 vLLM 一致；`fp4_mx_block16` 直接调用 SGLang 自己的量化函数。
 - **两种数值语义都算**，正好对应 M3 第 4 点要做的决定：

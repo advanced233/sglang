@@ -1,10 +1,16 @@
-"""M0: serving baselines for the low-bit KV cache project.
+"""M0: serving probes for the low-bit KV cache project.
+
+Stage 0 measures only what the kernel work needs to know; the full curves for the
+final tables are measured in M5 on the final code.
 
 Groups (run in the order given by --groups):
-  main     every SGLang config x input length x concurrency
-  pool     decode TPOT vs KV pool size (--max-total-tokens), BF16 vs fp4_mx_block16
-  profile  torch-profiler decode capture + kernel tables, BF16 vs fp4_mx_block16
-  vllm     vLLM BF16 / int8_per_token_head / int4_per_token_head on TRITON_ATTN
+  main  each SGLang config at a 16k input, concurrency 6 and its max; on the
+        BF16-triton and fp4_mx_block16 servers also a decode probe (1k input,
+        concurrency 1) and, on BF16-triton, a torch-profiler decode capture
+  pool  one more fp4_mx_block16 server with a 40k-token pool, same decode probe,
+        so the two FP4 points give the TPOT-vs-pool-size slope
+  vllm  vLLM BF16 / int8_per_token_head / int4_per_token_head on TRITON_ATTN,
+        same 16k points as main
 
 Every server runs on one GPU in its own process group, listens on 127.0.0.1 on a
 free port, and is stopped by signalling that group only. GPU telemetry
@@ -14,7 +20,7 @@ summary.md, env.json, servers/*.log, telemetry/*.csv, bench/*.jsonl, profiles/.
 
 Example:
   python benchmark/kv_lowbit/m0_bench.py --model "$QWEN3_8B" --gpu 0 \
-      --out "$KVQ_WORK/outputs/m0/$TS" --groups main,pool,profile,vllm
+      --out "$KVQ_WORK/outputs/m0/$TS" --groups main,pool,vllm
 """
 
 import argparse
@@ -75,12 +81,14 @@ GROUP_CONFIGS = {
         "sglang-fp4mx-triton",
     ],
     "vllm": ["vllm-bf16-triton", "vllm-int8-triton", "vllm-int4-triton"],
-    "profile": ["sglang-bf16-triton", "sglang-fp4mx-triton"],
 }
-POOL_SIZES = {
-    "sglang-bf16-triton": [40000, 100000],
-    "sglang-fp4mx-triton": [40000, 100000, 200000, 300000],
-}
+# Main-group servers that also run the decode probe at their default pool size.
+DECODE_PROBE_CONFIGS = ("sglang-bf16-triton", "sglang-fp4mx-triton")
+# Extra servers for the pool group. Two FP4 points fix the slope of the
+# whole-layer dequant cost; BF16 reads only the used tokens, so one point does.
+EXTRA_POOL_SIZES = {"sglang-fp4mx-triton": [40000]}
+# The FP4 profile is deferred to M6, which needs before/after captures anyway.
+PROFILE_CONFIGS = ("sglang-bf16-triton",)
 # nvidia-smi clock-event reason bits.
 THERMAL_BITS = 0x20 | 0x40
 POWER_CAP_BIT = 0x4
@@ -101,11 +109,14 @@ def _parse_args():
     )
     p.add_argument("--expect-gpu", default="A100-PCIE-40GB")
     p.add_argument("--out", type=Path, required=True)
-    p.add_argument("--groups", default="main,pool,profile,vllm")
+    p.add_argument("--groups", default="main,pool,vllm")
     p.add_argument("--configs", default="", help="Subset of config names; empty = all")
-    p.add_argument("--input-lens", default="4096,16384,32768")
+    p.add_argument("--input-lens", default="16384")
     p.add_argument("--output-len", type=int, default=256)
-    p.add_argument("--concurrency", default="1,8,32,max")
+    # 6: the largest concurrency every config fits at a 16k input (SGLang BF16
+    # holds ~121k tokens, i.e. 7 requests); "max" is each config's own limit.
+    p.add_argument("--concurrency", default="6,max")
+    p.add_argument("--no-profile", action="store_true")
     # SGLang captures decode CUDA graphs up to batch 32 on this GPU; larger
     # batches would fall back to eager decode and not be comparable.
     p.add_argument("--max-concurrency-cap", type=int, default=32)
@@ -444,7 +455,7 @@ class Session:
                 "port": port,
                 "server": None,
                 "telemetry": None,
-                "info": {"capacity_tokens": 100000},
+                "info": {"capacity_tokens": 300000},
             }
             return
         _wait_gpu_free(
@@ -600,8 +611,8 @@ def _concurrencies(*, spec, capacity, input_len, output_len, cap):
 
 
 def _num_prompts(conc):
-    # About three waves at high concurrency; at least 8 requests for a stable median.
-    return min(max(8, 3 * conc), 128)
+    # Two waves at high concurrency; at least 8 requests for a stable median.
+    return min(max(8, 2 * conc), 128)
 
 
 def _seed(input_len, conc):
@@ -611,45 +622,75 @@ def _seed(input_len, conc):
 
 
 def run_sweep(session, *, group, config):
-    args = session.args
-    input_lens = [int(x) for x in args.input_lens.split(",")]
     with session.server(config=config, extra_args=[], tag=config) as ctx:
         if ctx is None:
             return
-        for input_len in input_lens:
-            concs = _concurrencies(
-                spec=args.concurrency,
-                capacity=ctx["info"].get("capacity_tokens"),
-                input_len=input_len,
-                output_len=args.output_len,
-                cap=args.max_concurrency_cap,
+        _sweep(session, ctx=ctx, group=group, config=config)
+        if group != "main":
+            return
+        if config in DECODE_PROBE_CONFIGS:
+            _decode_probe(
+                session,
+                ctx=ctx,
+                config=config,
+                tag=config,
+                pool_tokens=ctx["info"].get("capacity_tokens"),
             )
-            if not concs:
-                session.record(
-                    {
-                        "group": group,
-                        "config": config,
-                        "input_len": input_len,
-                        "status": "skipped",
-                        "reason": "one request does not fit",
-                    }
-                )
-                continue
-            for conc in concs:
-                session.bench_and_record(
-                    ctx=ctx,
-                    group=group,
-                    config=config,
-                    tag=config,
-                    input_len=input_len,
-                    conc=conc,
-                    num_prompts=_num_prompts(conc),
-                    seed=_seed(input_len, conc),
-                )
+        if config in PROFILE_CONFIGS and not session.args.no_profile:
+            _profile(session, ctx=ctx, config=config, tag=f"{config}-profile")
+
+
+def _sweep(session, *, ctx, group, config):
+    args = session.args
+    for input_len in [int(x) for x in args.input_lens.split(",")]:
+        concs = _concurrencies(
+            spec=args.concurrency,
+            capacity=ctx["info"].get("capacity_tokens"),
+            input_len=input_len,
+            output_len=args.output_len,
+            cap=args.max_concurrency_cap,
+        )
+        if not concs:
+            session.record(
+                {
+                    "group": group,
+                    "config": config,
+                    "input_len": input_len,
+                    "status": "skipped",
+                    "reason": "one request does not fit",
+                }
+            )
+            continue
+        for conc in concs:
+            session.bench_and_record(
+                ctx=ctx,
+                group=group,
+                config=config,
+                tag=config,
+                input_len=input_len,
+                conc=conc,
+                num_prompts=_num_prompts(conc),
+                seed=_seed(input_len, conc),
+            )
+
+
+def _decode_probe(session, *, ctx, config, tag, pool_tokens):
+    """Decode TPOT at a short context, where pool-size-dependent costs dominate."""
+    session.bench_and_record(
+        ctx=ctx,
+        group="pool",
+        config=config,
+        tag=tag,
+        input_len=1024,
+        conc=1,
+        num_prompts=8,
+        seed=7,
+        extra={"pool_tokens": pool_tokens},
+    )
 
 
 def run_pool(session, *, configs):
-    for config, sizes in POOL_SIZES.items():
+    for config, sizes in EXTRA_POOL_SIZES.items():
         if config not in configs:
             continue
         for size in sizes:
@@ -657,70 +698,52 @@ def run_pool(session, *, configs):
             with session.server(
                 config=config, extra_args=["--max-total-tokens", str(size)], tag=tag
             ) as ctx:
-                if ctx is None:
-                    continue
-                session.bench_and_record(
-                    ctx=ctx,
-                    group="pool",
-                    config=config,
-                    tag=tag,
-                    input_len=1024,
-                    conc=1,
-                    num_prompts=8,
-                    seed=7,
-                    extra={"pool_tokens": size},
-                )
+                if ctx is not None:
+                    _decode_probe(
+                        session, ctx=ctx, config=config, tag=tag, pool_tokens=size
+                    )
 
 
-def run_profile(session, *, configs):
-    for config in GROUP_CONFIGS["profile"]:
-        if config not in configs:
-            continue
-        tag = f"{config}-profile"
-        with session.server(config=config, extra_args=[], tag=tag) as ctx:
-            if ctx is None:
-                continue
-            trace_dir = session.out / "profiles" / tag
-            # Decode at a 16k context with 6 requests fits the BF16 pool (~121k tokens).
-            cmd = [
-                sys.executable,
-                str(PROFILE_SCRIPT),
-                "--framework",
-                "sglang",
-                "--url",
-                f"http://127.0.0.1:{ctx['port']}",
-                "--output-dir",
-                str(trace_dir),
-                "--profile-workload",
-                "decode",
-                "--decode-input-len",
-                "16384",
-                "--decode-output-len",
-                "256",
-                "--probe-requests",
-                "6",
-                "--num-steps",
-                "5",
-                "--warmup-steps",
-                "10",
-            ]
-            if session.args.dry_run:
-                print(f"  [profile] {shlex.join(cmd)}")
-                continue
-            table = session.out / "profiles" / f"{tag}_decode_tables.txt"
-            with open(table, "w") as f:
-                proc = subprocess.run(
-                    cmd, stdout=f, stderr=subprocess.STDOUT, timeout=3600
-                )
-            session.record(
-                {
-                    "group": "profile",
-                    "config": config,
-                    "tag": tag,
-                    "status": "ok" if proc.returncode == 0 else "profile_failed",
-                    "tables": table.name,
-                }
-            )
+def _profile(session, *, ctx, config, tag):
+    trace_dir = session.out / "profiles" / tag
+    # Decode at a 16k context with 6 requests fits the BF16 pool (~121k tokens).
+    cmd = [
+        sys.executable,
+        str(PROFILE_SCRIPT),
+        "--framework",
+        "sglang",
+        "--url",
+        f"http://127.0.0.1:{ctx['port']}",
+        "--output-dir",
+        str(trace_dir),
+        "--profile-workload",
+        "decode",
+        "--decode-input-len",
+        "16384",
+        "--decode-output-len",
+        "256",
+        "--probe-requests",
+        "6",
+        "--num-steps",
+        "5",
+        "--warmup-steps",
+        "10",
+    ]
+    if session.args.dry_run:
+        print(f"  [profile] {shlex.join(cmd)}")
+        return
+    table = session.out / "profiles" / f"{tag}_decode_tables.txt"
+    with open(table, "w") as f:
+        proc = subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT, timeout=3600)
+    session.record(
+        {
+            "group": "profile",
+            "config": config,
+            "tag": tag,
+            "status": "ok" if proc.returncode == 0 else "profile_failed",
+            "tables": table.name,
+        }
+    )
 
 
 # ----------------------------------------------------------------------------
@@ -801,8 +824,6 @@ def main():
                     run_sweep(session, group=group, config=config)
         elif group == "pool":
             run_pool(session, configs=selected)
-        elif group == "profile":
-            run_profile(session, configs=selected)
         else:
             raise SystemExit(f"unknown group {group!r}")
     if not args.dry_run:

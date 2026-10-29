@@ -45,6 +45,12 @@ def _parse_args():
     p.add_argument("--prefix-lens", default="4096,16384")
     p.add_argument("--cont-len", type=int, default=128)
     p.add_argument("--samples", type=int, default=8)
+    p.add_argument(
+        "--long-samples",
+        type=int,
+        default=4,
+        help="Windows used for prefixes longer than 4096 tokens",
+    )
     p.add_argument("--schemes", default=",".join(kvq_ref.SCHEMES))
     p.add_argument(
         "--per-layer-scheme",
@@ -243,7 +249,8 @@ def _render_markdown(result):
     )
     lines.append(
         f"- corpus: {result['corpus']['files']} files, {result['corpus']['tokens']} "
-        f"tokens | {result['samples']} windows per prefix length | "
+        f"tokens | {result['samples']} windows at prefix <= 4096, "
+        f"{result['long_samples']} at longer prefixes | "
         f"continuation {result['cont_len']} tokens"
     )
     lines.append("- KL and dNLL are means over continuation positions and windows.")
@@ -306,6 +313,7 @@ def main():
         "env": _env_info(args.model),
         "corpus": corpus,
         "samples": args.samples,
+        "long_samples": args.long_samples,
         "cont_len": args.cont_len,
         "by_prefix": {},
         "outliers": {},
@@ -314,7 +322,7 @@ def main():
         print(f"prefix {prefix_len}", flush=True)
         by_scheme, outliers = _run_prefix_len(
             model=model,
-            windows=windows,
+            windows=windows if prefix_len <= 4096 else windows[: args.long_samples],
             prefix_len=prefix_len,
             cont_len=args.cont_len,
             schemes=schemes,
