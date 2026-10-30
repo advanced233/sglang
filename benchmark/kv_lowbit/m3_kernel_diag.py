@@ -1,10 +1,11 @@
-"""M3.0: decode-attention kernel diagnosis on one fixed decode shape.
+"""M3.0 / M3a: decode-attention kernel diagnosis on one fixed decode shape.
 
-Times SGLang's Triton decode kernel (BF16, fp8_e5m2) and vLLM's TRITON_ATTN
-kernel (BF16, INT8 / INT4 per-token-head) on identical inputs, plus vLLM
-ablations for the stage-0 hypotheses in plan.md 3.5 (decode tile size; scales
-inline in the page vs in separate aligned buffers). Then profiles one call of
-each config with Nsight Compute.
+Times SGLang's Triton decode kernels (BF16, fp8_e5m2, and the M3 INT8 kernel)
+and vLLM's TRITON_ATTN kernel (BF16, INT8 / INT4 per-token-head) on identical
+inputs, plus vLLM ablations for the stage-0 hypotheses in plan.md 3.5 (decode
+tile size; scales inline in the page vs in separate aligned buffers). With
+--sweep, also times the INT8_SWEEP grid of the SGLang INT8 kernel. Then
+profiles one call of each config (and the fastest sweep variants) with ncu.
 
 The default shape is the stage-0 serving point: 6 sequences x 16k context with
 Qwen3-8B attention (32 Q heads, 8 KV heads, head_dim 128). Each op is captured
@@ -27,6 +28,7 @@ import argparse
 import contextlib
 import csv
 import io
+import itertools
 import json
 import os
 import re
@@ -61,6 +63,13 @@ class Config(msgspec.Struct, frozen=True, kw_only=True):
     layout: str = "inline"
     # vLLM only: decode TILE_SIZE override; 0 keeps vLLM's choice (16 for a bf16 Q).
     decode_tile: int = 0
+    # SGLang INT8 only: decode_attention_fwd_int8 tuning knobs.
+    convert: str = "magic"
+    block_n: int = 64
+    num_warps: int = 4
+    num_stages: int = 2
+    # SGLang only: --triton-attention-num-kv-splits.
+    max_kv_splits: int = SGLANG_MAX_KV_SPLITS
 
     @property
     def env(self):
@@ -72,6 +81,7 @@ CONFIGS = {
     "ref-sum": Config(impl="ref", kv="bf16"),
     "sglang-bf16": Config(impl="sglang", kv="bf16"),
     "sglang-fp8e5m2": Config(impl="sglang", kv="fp8_e5m2"),
+    "sglang-int8": Config(impl="sglang", kv="int8"),
     "vllm-bf16": Config(impl="vllm", kv="bf16"),
     "vllm-bf16-t32": Config(impl="vllm", kv="bf16", decode_tile=32),
     "vllm-int8": Config(impl="vllm", kv="int8"),
@@ -87,9 +97,51 @@ CONFIGS = {
 MAIN_KERNEL = {
     "ref": "reduce_kernel",
     "sglang": "_fwd_grouped_kernel_stage1",
+    "sglang-int8": "_fwd_grouped_kernel_stage1_int8",
     "vllm": "kernel_unified_attention",
     "vllm-int4": "_attn_packed",
 }
+
+# M3a tuning grid for the SGLang INT8 decode kernel (--sweep).
+INT8_SWEEP = {
+    "convert": ("magic", "cast"),
+    "block_n": (32, 64, 128),
+    "num_warps": (4, 8),
+    "num_stages": (2, 3),
+    "max_kv_splits": (8, 16),
+}
+_INT8_VARIANT = re.compile(r"sglang-int8@(\w+)-n(\d+)-w(\d+)-s(\d+)-k(\d+)$")
+
+
+def int8_variant_name(cfg):
+    return (
+        f"sglang-int8@{cfg.convert}-n{cfg.block_n}-w{cfg.num_warps}"
+        f"-s{cfg.num_stages}-k{cfg.max_kv_splits}"
+    )
+
+
+def int8_sweep_configs():
+    for values in itertools.product(*INT8_SWEEP.values()):
+        cfg = Config(impl="sglang", kv="int8", **dict(zip(INT8_SWEEP, values)))
+        yield int8_variant_name(cfg), cfg
+
+
+def config_from_name(name):
+    """A CONFIGS entry, or an INT8 sweep variant named by int8_variant_name."""
+    if name in CONFIGS:
+        return CONFIGS[name]
+    m = _INT8_VARIANT.match(name)
+    if m is None:
+        raise SystemExit(f"unknown config {name!r}; choose from {list(CONFIGS)}")
+    return Config(
+        impl="sglang",
+        kv="int8",
+        convert=m[1],
+        block_n=int(m[2]),
+        num_warps=int(m[3]),
+        num_stages=int(m[4]),
+        max_kv_splits=int(m[5]),
+    )
 
 
 class Shape(msgspec.Struct, frozen=True, kw_only=True):
@@ -119,6 +171,8 @@ def kv_bytes(*, cfg, shape):
 def _main_kernel(cfg):
     if cfg.impl == "vllm" and cfg.kv == "int4":
         return MAIN_KERNEL["vllm-int4"]
+    if cfg.impl == "sglang" and cfg.kv == "int8":
+        return MAIN_KERNEL["sglang-int8"]
     return MAIN_KERNEL[cfg.impl]
 
 
@@ -174,49 +228,64 @@ def _build_ref(*, k, v):
     return op, None, {}
 
 
-def _build_sglang(*, cfg, shape, q, k, v):
+def _sglang_decode_metadata(*, shape, max_kv_splits, device):
+    """Contiguous slots per request after padding slot 0, as in a fresh pool."""
     import torch
 
-    from sglang.kernels.ops.attention.decode_attention import decode_attention_fwd
     from sglang.kernels.ops.attention.metadata import get_num_kv_splits_triton
 
-    dev = q.device
-    dtype = torch.bfloat16 if cfg.kv == "bf16" else torch.float8_e5m2
-    # Slot 0 is the pool's padding slot; requests own contiguous slots after it.
-    k_buf = torch.zeros(
-        (shape.num_tokens + 1, shape.num_kv_heads, shape.head_dim),
-        dtype=dtype,
-        device=dev,
-    )
-    v_buf = torch.zeros_like(k_buf)
-    k_buf[1:] = k.to(dtype)
-    v_buf[1:] = v.to(dtype)
-    kv_indptr = torch.arange(shape.batch + 1, dtype=torch.int32, device=dev)
+    kv_indptr = torch.arange(shape.batch + 1, dtype=torch.int32, device=device)
     kv_indptr *= shape.seq_len
-    kv_indices = torch.arange(1, shape.num_tokens + 1, dtype=torch.int64, device=dev)
-    seq_lens = torch.full((shape.batch,), shape.seq_len, dtype=torch.int32, device=dev)
-    num_kv_splits = torch.empty(shape.batch, dtype=torch.int32, device=dev)
+    num_kv_splits = torch.empty(shape.batch, dtype=torch.int32, device=device)
     # Same split heuristic as TritonAttnBackend.get_num_kv_splits.
     get_num_kv_splits_triton[(1,)](
         num_kv_splits_ptr=num_kv_splits,
-        seq_lens_ptr=seq_lens,
+        seq_lens_ptr=torch.full(
+            (shape.batch,), shape.seq_len, dtype=torch.int32, device=device
+        ),
         num_seq=shape.batch,
         num_group=1,
         num_head=shape.num_q_heads,
         num_kv_head=shape.num_kv_heads,
-        max_kv_splits=SGLANG_MAX_KV_SPLITS,
-        device_core_count=torch.cuda.get_device_properties(dev).multi_processor_count,
+        max_kv_splits=max_kv_splits,
+        device_core_count=torch.cuda.get_device_properties(
+            device
+        ).multi_processor_count,
         MAX_NUM_SEQ=256,
     )
-    attn_logits = torch.empty(
-        (shape.batch, shape.num_q_heads, SGLANG_MAX_KV_SPLITS, shape.head_dim),
-        dtype=torch.float32,
-        device=dev,
+    split_shape = (shape.batch, shape.num_q_heads, max_kv_splits)
+    return {
+        "kv_indptr": kv_indptr,
+        "kv_indices": torch.arange(
+            1, shape.num_tokens + 1, dtype=torch.int64, device=device
+        ),
+        "attn_logits": torch.empty(
+            (*split_shape, shape.head_dim), dtype=torch.float32, device=device
+        ),
+        "attn_lse": torch.empty(split_shape, dtype=torch.float32, device=device),
+        "num_kv_splits": num_kv_splits,
+        "max_kv_splits": max_kv_splits,
+    }
+
+
+def _build_sglang(*, cfg, shape, q, k, v):
+    import torch
+
+    from sglang.kernels.ops.attention.decode_attention import decode_attention_fwd
+
+    if cfg.kv == "int8":
+        return _build_sglang_int8(cfg=cfg, shape=shape, q=q, k=k, v=v)
+    dtype = torch.bfloat16 if cfg.kv == "bf16" else torch.float8_e5m2
+    k_buf = torch.zeros(
+        (shape.num_tokens + 1, shape.num_kv_heads, shape.head_dim),
+        dtype=dtype,
+        device=q.device,
     )
-    attn_lse = torch.empty(
-        (shape.batch, shape.num_q_heads, SGLANG_MAX_KV_SPLITS),
-        dtype=torch.float32,
-        device=dev,
+    v_buf = torch.zeros_like(k_buf)
+    k_buf[1:] = k.to(dtype)
+    v_buf[1:] = v.to(dtype)
+    meta = _sglang_decode_metadata(
+        shape=shape, max_kv_splits=cfg.max_kv_splits, device=q.device
     )
     out = torch.empty_like(q)
 
@@ -226,19 +295,67 @@ def _build_sglang(*, cfg, shape, q, k, v):
             k_buffer=k_buf,
             v_buffer=v_buf,
             o=out,
-            kv_indptr=kv_indptr,
-            kv_indices=kv_indices,
-            attn_logits=attn_logits,
-            attn_lse=attn_lse,
-            num_kv_splits=num_kv_splits,
-            max_kv_splits=SGLANG_MAX_KV_SPLITS,
             sm_scale=shape.head_dim**-0.5,
             k_scale=1.0,
             v_scale=1.0,
+            **meta,
         )
 
-    splits = sorted(set(num_kv_splits.tolist()))
-    return op, out, {"kv_splits": splits, "block_n": 32}
+    splits = sorted(set(meta["num_kv_splits"].tolist()))
+    return op, out, {"kv_splits": splits}
+
+
+def _build_sglang_int8(*, cfg, shape, q, k, v):
+    import torch
+
+    from sglang.kernels.ops.attention.decode_attention_int8 import (
+        decode_attention_fwd_int8,
+    )
+    from sglang.kernels.ops.kvcache.int8_per_token_head import (
+        store_int8_per_token_head_kv,
+    )
+
+    def zeros(*size, dtype):
+        return torch.zeros(size, dtype=dtype, device=q.device)
+
+    slots, heads = shape.num_tokens + 1, shape.num_kv_heads
+    k_buf = zeros(slots, heads, shape.head_dim, dtype=torch.int8)
+    v_buf = zeros(slots, heads, shape.head_dim, dtype=torch.int8)
+    k_scale = zeros(slots, heads, dtype=torch.float32)
+    v_scale = zeros(slots, heads, dtype=torch.float32)
+    meta = _sglang_decode_metadata(
+        shape=shape, max_kv_splits=cfg.max_kv_splits, device=q.device
+    )
+    # The M2 write path, so the cache holds what a server would store.
+    store_int8_per_token_head_kv(
+        k=k,
+        v=v,
+        loc=meta["kv_indices"],
+        k_cache=k_buf,
+        v_cache=v_buf,
+        k_scale=k_scale,
+        v_scale=v_scale,
+    )
+    out = torch.empty_like(q)
+
+    def op():
+        decode_attention_fwd_int8(
+            q=q,
+            k_buffer=k_buf,
+            v_buffer=v_buf,
+            k_scale_buffer=k_scale,
+            v_scale_buffer=v_scale,
+            o=out,
+            sm_scale=shape.head_dim**-0.5,
+            block_n=cfg.block_n,
+            num_warps=cfg.num_warps,
+            num_stages=cfg.num_stages,
+            convert=cfg.convert,
+            **meta,
+        )
+
+    splits = sorted(set(meta["num_kv_splits"].tolist()))
+    return op, out, {"kv_splits": splits}
 
 
 def _vllm_caches(*, cfg, num_blocks, shape):
@@ -423,7 +540,7 @@ def _time_graph(graph):
 def _bench_one(*, name, shape, q, k, v, ref):
     import torch
 
-    cfg = CONFIGS[name]
+    cfg = config_from_name(name)
     row = {
         "config": name,
         **msgspec.structs.asdict(cfg),
@@ -468,7 +585,7 @@ def bench(args):
     import torch
 
     shape = shape_from_args(args)
-    names = [n for n in selected_configs(args) if CONFIGS[n].env == args.env]
+    names = [n for n in selected_configs(args) if config_from_name(n).env == args.env]
     versions = _env_versions()
     if args.expect_gpu not in versions["device"]:
         raise SystemExit(
@@ -478,21 +595,23 @@ def bench(args):
     q, k, v = make_inputs(shape)
     ref = reference_attention(q=q, k=k, v=v, shape=shape)
     torch.cuda.empty_cache()
-    with open(args.out / f"bench_{args.env}.jsonl", "a") as f:
-        for name in names:
-            row = _bench_one(name=name, shape=shape, q=q, k=k, v=v, ref=ref)
-            torch.cuda.synchronize()
-            torch.cuda.empty_cache()
+    jobs = [(f"bench_{args.env}.jsonl", name) for name in names]
+    if args.sweep and args.env == "sglang":
+        jobs += [("sweep_sglang.jsonl", name) for name, _ in int8_sweep_configs()]
+    for file_name, name in jobs:
+        row = _bench_one(name=name, shape=shape, q=q, k=k, v=v, ref=ref)
+        torch.cuda.synchronize()
+        torch.cuda.empty_cache()
+        with open(args.out / file_name, "a") as f:
             f.write(json.dumps(row) + "\n")
-            f.flush()
-            print(json.dumps(row), flush=True)
+        print(json.dumps(row), flush=True)
 
 
 def launch(args):
     import torch
 
     shape = shape_from_args(args)
-    cfg = CONFIGS[args.config]
+    cfg = config_from_name(args.config)
     q, k, v = make_inputs(shape)
     with vllm_decode_tile(cfg.decode_tile):
         op, _, _ = build_op(cfg=cfg, shape=shape, q=q, k=k, v=v)
@@ -548,8 +667,9 @@ def _note(out, text):
 def _run_bench(args, *, env, gpu_uuid):
     from m0_bench import _compute_pids
 
-    names = [n for n in selected_configs(args) if CONFIGS[n].env == env]
-    if not names:
+    names = [n for n in selected_configs(args) if config_from_name(n).env == env]
+    sweep = args.sweep and env == "sglang"
+    if not names and not sweep:
         return
     cmd = [
         _python(args=args, env=env),
@@ -562,6 +682,7 @@ def _run_bench(args, *, env, gpu_uuid):
         "--configs",
         ",".join(names),
         *_passthrough_args(args),
+        *(["--sweep"] if sweep else []),
     ]
     before = _compute_pids(gpu_uuid)
     with open(args.out / f"bench_{env}.log", "w") as log:
@@ -584,7 +705,7 @@ def _ncu_export(*, ncu, report, extra, path):
 
 
 def _run_ncu(args, *, name):
-    cfg = CONFIGS[name]
+    cfg = config_from_name(name)
     ncu_dir = args.out / "ncu"
     ncu_dir.mkdir(exist_ok=True)
     report = ncu_dir / f"{name}.ncu-rep"
@@ -689,9 +810,29 @@ def run(args):
     finally:
         telemetry.stop()
     if not args.skip_ncu:
-        for name in selected_configs(args):
+        names = selected_configs(args)
+        names += [n for n in _best_sweep_variants(args.out) if n not in names]
+        for name in names:
             _run_ncu(args, name=name)
     write_report(args.out, peak_gbps=args.peak_gbps)
+
+
+def _best_sweep_variants(out):
+    """Fastest sweep variant for each conversion."""
+    best = {}
+    for r in _jsonl(out / "sweep_sglang.jsonl"):
+        if r.get("status") != "ok":
+            continue
+        cur = best.get(r["convert"])
+        if cur is None or r["time_us_median"] < cur["time_us_median"]:
+            best[r["convert"]] = r
+    return [r["config"] for r in best.values()]
+
+
+def _jsonl(path):
+    if not path.exists():
+        return []
+    return [json.loads(x) for x in path.read_text().splitlines() if x.strip()]
 
 
 # ----------------------------------------------------------------------------
@@ -805,13 +946,9 @@ def _sass_mix(path):
 
 
 def _bench_rows(out):
-    rows = []
-    for env in ("sglang", "vllm"):
-        path = out / f"bench_{env}.jsonl"
-        if path.exists():
-            rows += [json.loads(x) for x in path.read_text().splitlines() if x.strip()]
-    order = list(CONFIGS)
-    return sorted(rows, key=lambda r: order.index(r["config"]))
+    rows = _jsonl(out / "bench_sglang.jsonl") + _jsonl(out / "bench_vllm.jsonl")
+    order = {name: i for i, name in enumerate(CONFIGS)}
+    return sorted(rows, key=lambda r: order.get(r["config"], len(order)))
 
 
 def _telemetry_cells(out, row):
@@ -845,16 +982,58 @@ def _timing_table(out, rows, peak_gbps):
         vs_base = (
             f"{base['time_us_median'] / r['time_us_median']:.2f}x" if base else "-"
         )
-        notes = [
-            f"{k}={r[k]}"
-            for k in ("kv_splits", "decode_tile_used", "vllm_path", "layout")
-            if k in r and (k != "layout" or r["impl"] == "vllm")
-        ]
+        notes = [f"{k}={r[k]}" for k in _note_keys(r) if k in r]
         lines.append(
             f"| {r['config']} | {r['kv_bytes'] / 1e6:.0f} | {r['time_us_median']:.1f} "
             f"| {gbps:.0f} | {100 * gbps / peak_gbps:.0f}% | {vs_ref} | {vs_base} "
             f"| {r.get('cos', '-')} | {_telemetry_cells(out, r)} | {', '.join(notes)} |"
         )
+    return lines
+
+
+def _note_keys(row):
+    if row["impl"] == "vllm":
+        return ("decode_tile_used", "vllm_path", "layout")
+    if row["kv"] == "int8":
+        return ("kv_splits", "convert", "block_n", "num_warps", "num_stages")
+    return ("kv_splits",)
+
+
+def _sweep_table(out, rows, top=16):
+    """Fastest INT8 variants, then the best time for each value of each knob."""
+    sweep = [r for r in _jsonl(out / "sweep_sglang.jsonl") if r.get("status") == "ok"]
+    if not sweep:
+        return []
+    ok = {r["config"]: r for r in rows if r.get("status") == "ok"}
+    base, ref = ok.get("sglang-bf16"), ok.get("ref-sum")
+    sweep.sort(key=lambda r: r["time_us_median"])
+    lines = [
+        f"{len(sweep)} variants timed; the {min(top, len(sweep))} fastest:",
+        "",
+        "| convert | block_n | warps | stages | max splits | us | GB/s | % of ref-sum "
+        "| speed vs sglang-bf16 | cos vs fp32 |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for r in sweep[:top]:
+        gbps = _gbps(r)
+        lines.append(
+            f"| {r['convert']} | {r['block_n']} | {r['num_warps']} | {r['num_stages']} "
+            f"| {r['max_kv_splits']} | {r['time_us_median']:.1f} | {gbps:.0f} "
+            f"| {_fmt(100 * gbps / _gbps(ref) if ref else None, '{:.0f}%')} "
+            f"| {_fmt(base['time_us_median'] / r['time_us_median'] if base else None, '{:.2f}x')} "
+            f"| {r.get('cos', '-')} |"
+        )
+    lines += ["", "Best time per knob value (us):", ""]
+    for knob, values in INT8_SWEEP.items():
+        best = {
+            v: min(r["time_us_median"] for r in sweep if r[knob] == v)
+            for v in values
+            if any(r[knob] == v for r in sweep)
+        }
+        lines.append(f"- {knob}: " + ", ".join(f"{v} {t:.1f}" for v, t in best.items()))
+    failed = len(_jsonl(out / "sweep_sglang.jsonl")) - len(sweep)
+    if failed:
+        lines.append(f"- {failed} variants failed; see sweep_sglang.jsonl")
     return lines
 
 
@@ -870,7 +1049,13 @@ def _ncu_tables(out):
         "|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|",
     ]
     mix_lines = []
-    for name, cfg in CONFIGS.items():
+    profiled = sorted(
+        p.name.removesuffix("_details.csv") for p in ncu_dir.glob("*_details.csv")
+    )
+    names = [n for n in CONFIGS if n in profiled]
+    names += [n for n in profiled if n not in CONFIGS]
+    for name in names:
+        cfg = config_from_name(name)
         details = _ncu_details(ncu_dir / f"{name}_details.csv")
         if not details:
             continue
@@ -947,6 +1132,9 @@ def write_report(out, *, peak_gbps):
         *_timing_table(out, rows, peak_gbps),
         "",
     ]
+    sweep_lines = _sweep_table(out, rows)
+    if sweep_lines:
+        lines += ["## SGLang INT8 decode sweep", "", *sweep_lines, ""]
     kernel_lines, mix_lines = _ncu_tables(out)
     if len(kernel_lines) > 2:
         lines += [
@@ -988,10 +1176,9 @@ def shape_from_args(args):
 def selected_configs(args):
     if not args.configs:
         return list(CONFIGS)
-    names = args.configs.split(",")
-    unknown = [n for n in names if n not in CONFIGS]
-    if unknown:
-        raise SystemExit(f"unknown configs {unknown}; choose from {list(CONFIGS)}")
+    names = [n for n in args.configs.split(",") if n]
+    for name in names:
+        config_from_name(name)
     return names
 
 
@@ -1001,7 +1188,9 @@ def _parse_args():
     p.add_argument("--out", type=Path)
     p.add_argument("--gpu", type=int, help="nvidia-smi index (PCI order); run only")
     p.add_argument("--env", choices=["sglang", "vllm"], help="bench only")
-    p.add_argument("--config", choices=list(CONFIGS), help="launch only")
+    p.add_argument(
+        "--config", help="launch only: a config or an sglang-int8@... sweep variant"
+    )
     p.add_argument("--configs", default="", help="comma-separated subset")
     p.add_argument("--batch", type=int, default=6)
     p.add_argument("--seq-len", type=int, default=16384)
@@ -1016,6 +1205,11 @@ def _parse_args():
     )
     p.add_argument("--ncu", default="ncu")
     p.add_argument("--skip-ncu", action="store_true")
+    p.add_argument(
+        "--sweep",
+        action="store_true",
+        help="also time the INT8_SWEEP grid of the SGLang INT8 kernel",
+    )
     return p.parse_args()
 
 

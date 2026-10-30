@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 # (module, public_fn) migrated from layers/attention/triton_ops + model_executor.
 _TRITON_KERNELS = [
     ("decode_attention", "decode_attention_fwd"),
+    ("decode_attention_int8", "decode_attention_fwd_int8"),
     ("extend_attention", "extend_attention_fwd"),
     ("extend_attention", "build_unified_kv_indices"),
     ("prefill_attention", "context_attention_fwd"),

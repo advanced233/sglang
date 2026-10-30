@@ -318,6 +318,15 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
 4. **备选**：如果第 3 步之后仍然受指令限制，把 Q 按 head 量化成 int8，用 INT8 tensor core 直接算 QK，K 完全不用转换（SageAttention 的做法，需要额外评估精度）。
 5. **调参**：`num_warps`、`num_stages`、`BLOCK_N` 各扫一遍；看 ncu 的寄存器数和 occupancy，目标是 DRAM 吞吐 ≥ 75%。
 
+**分三轮，每轮一次 GPU 会话**：
+- **M3a**（代码已提交，GPU 手册见 [`stage2_runbook.md`](stage2_runbook.md)）：独立的 INT8 decode kernel，不接服务。
+  - 代码：`python/sglang/kernels/ops/attention/decode_attention_int8.py` 的 `decode_attention_fwd_int8`。第 1–3 步都在里面；转换方式（`magic` 位运算 / `cast` 逐元素转换）、`block_n`、`num_warps`、`num_stages` 是参数。stage 2 复用 BF16 的归约 kernel。
+  - `magic` 转换用 numpy 逐位模拟过，256 个 int8 值全部精确。`cast` 版本的 kernel 测试在 Triton 解释器下通过；`magic` 用了 inline asm，只能在 GPU 上验证。
+  - 诊断脚本新增 `sglang-int8` 配置和 `--sweep`：48 种组合（转换 × `block_n` 32 / 64 / 128 × warps 4 / 8 × stages 2 / 3 × 最大 split 数 8 / 16）各计时一次，再对每种转换最快的组合跑 ncu。
+  - 验收：余弦相似度与 vLLM INT8 相同（0.99995）；单次调用 ≤ 200 us；ncu 的 DRAM 吞吐 ≥ 75%。
+- **M3b**：接进服务（下面第 1、2、5 条）。验收：默认显存比例下的容量、端到端单步时间、GSM8K。
+- **M3c**：extend 和确定性模式，以及当前 chunk 的数值语义（下面第 3、4 条）。
+
 1. **新的访问方式**：在 `KVCacheAttentionAccessKind` 里新增一种（名字和形状要和维护者商量），让池子把原始的 int8 buffer 和 scale buffer 直接交给后端，不再走整层反量化。
    - 这是 API 改动。实现之前先在上游开一个 RFC issue，说明动机：Ampere 上没有低比特 KV，而 `fp4_mx_block16` 在 Triton 后端上是整层反量化。
 2. **decode**：改 `_fwd_grouped_kernel_stage1`（`:530`）和 `_fwd_kernel_stage1`（`:235`）。
