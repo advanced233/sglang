@@ -1,0 +1,5 @@
+==PROF== Connected to process 685045 ($KVQ_WORK/envs/sglang/bin/python3.12)
+==PROF== Profiling "_fwd_grouped_kernel_stage1_int8" - 0: 0%....50%....100% - 48 passes
+==PROF== Profiling "_fwd_kernel_stage2" - 1: 0%....50%....100% - 49 passes
+==PROF== Disconnected from process 685045
+==PROF== Report: $KVQ_WORK/outputs/m3diag/20261030-160608/ncu/sglang-int8@magic-n128-w4-s3-k8.ncu-rep
