@@ -191,6 +191,15 @@ def _fwd_grouped_kernel_stage1_int8(
         tl.store(Att_Lse + offs_mid_o_1, e_max + tl.log(e_sum), mask=mask_h)
 
 
+def _default_tile(head_dim):
+    # Fastest of a 48-way sweep at head_dim 128 (results/a100-40g/20261030-160608):
+    # 128 tokens and 3 stages keep 96 KB of int8 K/V in flight per CTA.
+    # Wider heads halve both to stay within shared memory; not measured.
+    if head_dim <= 128:
+        return 128, 3
+    return 64, 2
+
+
 def decode_attention_fwd_int8(
     *,
     q: torch.Tensor,
@@ -208,9 +217,9 @@ def decode_attention_fwd_int8(
     sm_scale: float,
     logit_cap: float = 0.0,
     sinks: Optional[torch.Tensor] = None,
-    block_n: int = 64,
+    block_n: Optional[int] = None,
     num_warps: int = 4,
-    num_stages: int = 2,
+    num_stages: Optional[int] = None,
     convert: str = "magic",
 ) -> None:
     """GQA/MHA decode over an int8 KV cache with per-(slot, head) scales.
@@ -219,7 +228,8 @@ def decode_attention_fwd_int8(
     int8 ``[slots, kv_heads, head_dim]``. ``k_scale_buffer`` /
     ``v_scale_buffer``: fp32 ``[slots, kv_heads]``. ``attn_logits`` /
     ``attn_lse`` and ``num_kv_splits`` are the BF16 decode's split workspace.
-    ``block_n``, ``num_warps``, ``num_stages`` and ``convert`` are tuning knobs.
+    ``block_n``, ``num_warps``, ``num_stages`` and ``convert`` are tuning knobs;
+    ``None`` picks the tile from the head dims.
     """
     assert k_buffer.dtype == torch.int8 and v_buffer.dtype == torch.int8
     assert k_scale_buffer.dtype == torch.float32
@@ -232,6 +242,9 @@ def decode_attention_fwd_int8(
     batch, head_num = q.shape[0], q.shape[1]
     kv_group_num = head_num // k_buffer.shape[1]
     Lk, Lv = k_buffer.shape[-1], v_buffer.shape[-1]
+    default_block_n, default_stages = _default_tile(max(Lk, Lv))
+    block_n = default_block_n if block_n is None else block_n
+    num_stages = default_stages if num_stages is None else num_stages
     grid = (batch, _grouped_head_tiles(head_num, kv_group_num), max_kv_splits)
     _fwd_grouped_kernel_stage1_int8[grid](
         q,

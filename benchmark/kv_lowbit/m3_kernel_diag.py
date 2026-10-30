@@ -65,9 +65,9 @@ class Config(msgspec.Struct, frozen=True, kw_only=True):
     decode_tile: int = 0
     # SGLang INT8 only: decode_attention_fwd_int8 tuning knobs.
     convert: str = "magic"
-    block_n: int = 64
+    block_n: int = 128
     num_warps: int = 4
-    num_stages: int = 2
+    num_stages: int = 3
     # SGLang only: --triton-attention-num-kv-splits.
     max_kv_splits: int = SGLANG_MAX_KV_SPLITS
 

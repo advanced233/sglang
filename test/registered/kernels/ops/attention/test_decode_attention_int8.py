@@ -47,7 +47,7 @@ def _reference(*, q, k, v, k_scale, v_scale, sm_scale, logit_cap):
 
 
 @pytest.mark.parametrize("convert", CONVERSIONS)
-@pytest.mark.parametrize("block_n", [32, 64])
+@pytest.mark.parametrize("block_n", [32, None])
 @pytest.mark.parametrize(
     "num_q_heads,num_kv_heads,head_dim,logit_cap",
     [(32, 8, 128, 0.0), (16, 2, 64, 0.0), (8, 8, 128, 30.0)],
