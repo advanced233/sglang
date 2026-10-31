@@ -19,7 +19,7 @@
 | sglang-int8-triton | 16384 | 6 | 12 | 187.2 | 19.67 | 26.33 | 5868 | 68 | 1050 | 0% | 80% |  |
 | sglang-int8-triton | 16384 | 13 | 26 | 234.7 | 27.26 | 40.81 | 14933 | 75 | 1035 | 0% | 88% |  |
 
-## Decode TPOT vs pool size (input 1024, output 256, concurrency 1)
+## Decode probe vs pool size (input 1024, concurrency 1)
 
 | config | pool tokens | median TPOT ms | out tok/s | max temp C | min SM MHz | thermal | power cap |
 |---|---:|---:|---:|---:|---:|---:|---:|

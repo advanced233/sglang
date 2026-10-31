@@ -125,7 +125,7 @@ def render(out_dir):
         ("m3b", "M3b: BF16 vs fused INT8 decode (Triton)", _sweep_table),
         (
             "pool",
-            "Decode TPOT vs pool size (input 1024, output 256, concurrency 1)",
+            "Decode probe vs pool size (input 1024, concurrency 1)",
             _pool_table,
         ),
     ]
