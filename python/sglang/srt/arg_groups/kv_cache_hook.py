@@ -127,13 +127,15 @@ def handle_int8_kv_cache_compatibility(server_args: Any) -> None:
             f"triton; got prefill={prefill_backend}, decode={decode_backend}."
         )
     # The host, transfer, and unified pools copy KV rows without the separate
-    # per-token scale buffers.
+    # per-token scale buffers; the deterministic extend kernel would read a
+    # dequantized copy of each whole layer.
     unsupported = {
         "--enable-hierarchical-cache": cfg.enable_hierarchical_cache,
         "--enable-lmcache": cfg.enable_lmcache,
         "--enable-unified-memory": cfg.enable_unified_memory,
         "--disaggregation-mode": cfg.disaggregation_mode != "null",
         "--speculative-algorithm": cfg.speculative_algorithm is not None,
+        "--enable-deterministic-inference": cfg.enable_deterministic_inference,
     }
     used = [flag for flag, enabled in unsupported.items() if enabled]
     if used:

@@ -1,11 +1,11 @@
-"""M2 smoke: the int8_per_token_head recipe on a real server, next to BF16.
+"""M2 / M3b smoke: the int8_per_token_head recipe on a real server, next to BF16.
 
 For each config (BF16 and INT8, both on the Triton backend with the same
 --max-total-tokens) starts an SGLang server, checks the KV bytes the pool
 allocated, sends one short request, runs a decode probe (1k input, 256 output,
-concurrency 1) and GSM8K through sgl-eval. The pool size is capped because the
-non-fused INT8 read dequantizes a whole layer of the pool into BF16 per call;
-at the default memory fraction that copy does not fit (plan.md M2).
+concurrency 1) and GSM8K through sgl-eval. M2's non-fused read dequantizes a
+whole layer of the pool per call, so its smoke caps the pool (100k tokens);
+--max-total-tokens 0 leaves the pool at the default memory fraction (M3b).
 
 Outputs under --out: runs.jsonl, summary.md, servers/*.log, telemetry/*.csv,
 eval/*.log, bench/*.jsonl.
@@ -73,8 +73,11 @@ def _server_cmd(*, args, config, port):
         # env's nvcc package does not ship; sgl-eval samples with top_p.
         "--sampling-backend",
         "pytorch",
-        "--max-total-tokens",
-        str(args.max_total_tokens),
+        *(
+            ["--max-total-tokens", str(args.max_total_tokens)]
+            if args.max_total_tokens
+            else []
+        ),
         *CONFIGS[config],
     ]
 
@@ -229,16 +232,17 @@ def _fmt_ms(x):
 def write_summary(out):
     rows = [json.loads(x) for x in (out / "runs.jsonl").read_text().splitlines()]
     lines = [
-        "# M2 smoke: int8_per_token_head vs BF16 (Triton backend)",
+        "# Smoke: int8_per_token_head vs BF16 (Triton backend)",
         "",
-        "| config | ready | KV dtype | KV B/token/layer | answer | probe ITL ms "
-        "| GSM8K % | examples | eval |",
-        "|---|---|---|---:|---|---:|---:|---:|---|",
+        "| config | ready | KV dtype | KV tokens | KV B/token/layer | answer "
+        "| probe ITL ms | GSM8K % | examples | eval |",
+        "|---|---|---|---:|---:|---|---:|---:|---:|---|",
     ]
     for r in rows:
         answer = str(r.get("answer", "-")).replace("\n", " ").replace("|", "/")[:40]
         lines.append(
             f"| {r['config']} | {r.get('ready')} | {r.get('kv_dtype_logged')} "
+            f"| {r.get('capacity_tokens', '-')} "
             f"| {r.get('kv_bytes_per_token_layer', '-')} | {answer} "
             f"| {_fmt_ms(r.get('probe_median_itl_ms'))} | {r.get('gsm8k_score', '-')} "
             f"| {r.get('gsm8k_examples', '-')} | {r.get('eval_status', '-')} |"
@@ -261,7 +265,7 @@ def _parse_args():
     p.add_argument("--gpu", type=int, required=True, help="nvidia-smi index")
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--configs", default=",".join(CONFIGS))
-    p.add_argument("--max-total-tokens", type=int, default=100000)
+    p.add_argument("--max-total-tokens", type=int, default=100000, help="0 = no cap")
     p.add_argument("--expect-gpu", default="A100-PCIE-40GB")
     p.add_argument("--ready-timeout", type=int, default=1200)
     p.add_argument(

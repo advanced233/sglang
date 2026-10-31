@@ -73,15 +73,15 @@ def _telemetry_cells(r):
 
 def _sweep_table(rows):
     lines = [
-        "| config | input | conc | prompts | out tok/s | median TPOT ms | median TTFT ms "
-        "| max temp C | min SM MHz | thermal | power cap | note |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
+        "| config | input | conc | prompts | out tok/s | median ITL ms | median TPOT ms "
+        "| median TTFT ms | max temp C | min SM MHz | thermal | power cap | note |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|",
     ]
     for r in rows:
         if r.get("status") == "skipped":
             lines.append(
                 f"| {r['config']} | {r['input_len']} | - | - | - | - | - | - | - | - | - "
-                f"| skipped: {r['reason']} |"
+                f"| - | skipped: {r['reason']} |"
             )
             continue
         note = [] if r["status"] == "ok" else [r["status"]]
@@ -91,7 +91,8 @@ def _sweep_table(rows):
             note.append("retried")
         lines.append(
             f"| {r['config']} | {r['input_len']} | {r['concurrency']} | {r['num_prompts']} "
-            f"| {_num(r.get('output_throughput'))} | {_num(r.get('median_tpot_ms'), '{:.2f}')} "
+            f"| {_num(r.get('output_throughput'))} | {_num(r.get('median_itl_ms'), '{:.2f}')} "
+            f"| {_num(r.get('median_tpot_ms'), '{:.2f}')} "
             f"| {_num(r.get('median_ttft_ms'), '{:.0f}')} | {_telemetry_cells(r)} "
             f"| {', '.join(note)} |"
         )
@@ -121,6 +122,7 @@ def render(out_dir):
         ("server", "Servers", _server_table),
         ("main", "SGLang sweep", _sweep_table),
         ("vllm", "vLLM sweep (text prompts, input lengths approximate)", _sweep_table),
+        ("m3b", "M3b: BF16 vs fused INT8 decode (Triton)", _sweep_table),
         (
             "pool",
             "Decode TPOT vs pool size (input 1024, output 256, concurrency 1)",

@@ -91,16 +91,21 @@ def test_store_rounds_to_nearest_and_floors_the_scale():
     assert k_scale[2, 1].item() == pytest.approx(1e-6, rel=1e-6)
 
 
+@pytest.mark.parametrize("gather", [False, True])
 @pytest.mark.parametrize("dtype", [torch.bfloat16, torch.float16])
-def test_dequant_matches_reference(dtype):
+def test_dequant_matches_reference(dtype, gather):
     # 1000 slots x 3 heads is not a multiple of the 32 rows per program.
     torch.manual_seed(0)
     data = torch.randint(-128, 128, (1000, 3, 128), dtype=torch.int8, device=DEVICE)
     scale = torch.rand((1000, 3), dtype=torch.float32, device=DEVICE)
+    # Repeated and out-of-order slots, as in a prefix gather.
+    slots = torch.randint(0, 1000, (777,), device=DEVICE) if gather else None
 
-    out = dequant_int8_per_token_head(data=data, scale=scale, dtype=dtype)
+    out = dequant_int8_per_token_head(data=data, scale=scale, dtype=dtype, slots=slots)
 
     ref = (data.float() * scale[..., None]).to(dtype)
+    if gather:
+        ref = ref[slots]
     assert out.dtype == dtype
     assert torch.equal(out, ref)
 

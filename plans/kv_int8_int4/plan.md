@@ -285,7 +285,7 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
 > - 配方 `Int8PerTokenHeadKVCacheMethod` 和另外两个 FP4 配方放在同一个文件里；访问方式是 prefill / decode 都走 `triton` 的 PLAIN，存储 dtype 为 int8。
 > - 兼容性检查是新的 `handle_int8_kv_cache_compatibility`：只允许 CUDA、MHA、prefill 和 decode 都是 `triton`；拒绝 HiCache、LMCache、unified memory、PD 分离和投机解码。池子的构建入口另外拒绝 MLA、SWA、Mamba 混合、page-major 等非普通 MHA 池子。
 > - 带 checkpoint KV scale 的模型直接报错：Triton 后端读取时还会再乘一次这个 scale。
-> - 与计划的差异：容量不在默认显存比例下验收。非融合读取每次把一整层池子反量化成 BF16，按默认比例分配的池子（约 84 万 token）每层要临时占用约 3.4 GB，放不下。M2 冒烟把池子限制在 10 万 token，只验收字节数和精度；默认比例下的容量放到 M3 验收。
+> - 与计划的差异：容量不在默认显存比例下验收。非融合读取每次把一整层池子反量化成 BF16。按默认比例分配的 INT8 池子约 23.6 万 token（BF16 是 121,576），K 和 V 各要临时占用约 0.48 GB；`fp4_mx_block16` 在默认比例下申请 0.85 GB 时就已 OOM（3.3），所以没有冒险。M2 冒烟把池子限制在 10 万 token，只验收字节数和精度；默认比例下的容量放到 M3 验收。
 > - 测试：CPU 单测 2 个（访问规则与存储 dtype、`compute_cell_size` 与实际分配一致），kernel 测试 3 个，池子往返测试 1 个（`test/registered/unit/mem_cache/test_int8_kv_pool.py`）。
 > - 阶段 1 实测（`results/a100-40g/20261029-211615/`）：CPU 测试 29 个、GPU 测试 7 个全部通过；服务能启动，每 token 每层 KV 字节数 INT8 2112、BF16 4098（1.94 倍），17 × 23 两边都答 391。decode 探测和 GSM8K 因为冒烟脚本的两个问题没有跑成（离线时 `random` 数据集要下载 ShareGPT；sgl-eval 带 top_p 采样触发 FlashInfer 采样 kernel 的 JIT，env 里缺 `curand.h`），脚本改为 `random-ids` 和 `--sampling-backend pytorch` 后补跑。
 > - 补跑（`results/a100-40g/20261029-214940/`，池子 10 万 token，sgl-eval 参数 `enable_thinking=false`、temperature 0.7、top_p 0.8，未设 top_k）：
@@ -342,6 +342,15 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
     - 可选的进一步优化（放到 M3b 之后）：V 按 32 位一组读进寄存器再转换，消掉 `LDS.U8`；显存下限是 158 us。
     - 端到端估算：16k、并发 6 时每步 attention 从 36 × 316 us = 11.4 ms 降到 36 × 194 us = 7.0 ms，ITL 约从 23.6 ms 降到 19.2 ms（快 1.23 倍），容量是 BF16 的 1.94 倍。
 - **M3b**：接进服务（下面第 1、2、5 条）。验收：默认显存比例下的容量、端到端单步时间、GSM8K。
+  - **实现**（代码已提交，GPU 手册见 [`stage2_m3b_runbook.md`](stage2_m3b_runbook.md)）：
+    - 新访问方式 `KVCacheAttentionAccessKind.FUSED_DEQUANT`：attention kernel 直接读池子里的量化数据和 scale，在寄存器里反量化，不生成反量化副本。INT8 配方的 decode 声明为它，prefill 仍是 PLAIN。
+    - Triton 后端（`srt/layers/attention/triton_int8_kv.py` 加 `triton_backend.py` 里的三处接入）：
+      - 初始化时按访问方式决定是否走融合 decode；page size 不是 1 或开了 DCP 时直接报错。
+      - decode 用 `get_raw_kv_buffer` 拿到 int8 数据和 scale，调用 M3a 的 kernel（tile 128、3 级流水）。
+      - extend 不再整层反量化：只把这一批请求的前缀行按 `kv_indices` 取出来、反量化成 BF16，再把下标换成 0..n-1 交给原来的 extend kernel。临时显存只随前缀长度增长（16k 前缀每层约 64 MB），默认显存比例因此可用。下标数组可能过量分配的 `gpu_only` 批次，以及 sliding window 层，仍走整层反量化。
+      - 当前 chunk 的语义不变（BF16，与 M2 相同）。
+    - 兼容性检查另外拒绝 `--enable-deterministic-inference`：确定性模式的 extend kernel 仍会读整层反量化副本，留到 M3c。
+    - 本地验证：CPU 单测通过；在 Triton 解释器下（转换方式用 `cast`），前缀取行与精确反量化逐元素一致，经过后端胶水层的 decode 与 fp32 参考的最大误差 7.4e-4（输出最大 1.57）。
 - **M3c**：extend 和确定性模式，以及当前 chunk 的数值语义（下面第 3、4 条）。
 
 1. **新的访问方式**：在 `KVCacheAttentionAccessKind` 里新增一种（名字和形状要和维护者商量），让池子把原始的 int8 buffer 和 scale buffer 直接交给后端，不再走整层反量化。

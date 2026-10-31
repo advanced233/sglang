@@ -371,6 +371,8 @@ class TritonAttnBackend(AttentionBackend):
                 self.max_context_len + self.split_tile_size - 1
             ) // self.split_tile_size
 
+        self._init_int8_kv_reads()
+
         assert not (
             model_runner.sliding_window_size is not None
             and model_runner.model_config.is_encoder_decoder
@@ -1629,6 +1631,42 @@ class TritonAttnBackend(AttentionBackend):
             return output, lse
         return output
 
+    def _init_int8_kv_reads(self):
+        """Fused decode and per-call prefix dequant for int8_per_token_head pools."""
+        from sglang.srt.layers.attention.triton_int8_kv import (
+            dequantized_prefix_kv,
+            forward_decode_int8,
+            uses_fused_int8_decode,
+        )
+
+        self.int8_fused_decode = uses_fused_int8_decode(
+            quant_method=self.token_to_kv_pool.get_kv_cache_quant_method(),
+            page_size=self.page_size,
+            dcp_size=self.dcp_size,
+        )
+        self.forward_decode_int8 = torch.compiler.disable(forward_decode_int8)
+        self.dequantized_prefix_kv = torch.compiler.disable(dequantized_prefix_kv)
+
+    def _extend_prefix_kv(self, *, layer, forward_batch, kv_indices, dtype):
+        """Prefix K/V buffers for the extend kernel and the indices it reads them by."""
+        # The gather needs exact-length indices; gpu_only batches over-allocate.
+        if (
+            self.int8_fused_decode
+            and forward_batch.extend_prefix_lens_cpu is not None
+            and (layer.sliding_window_size is None or layer.sliding_window_size <= -1)
+        ):
+            return self.dequantized_prefix_kv(
+                pool=self.token_to_kv_pool,
+                layer_id=layer.layer_id,
+                kv_indices=kv_indices,
+                dtype=dtype,
+            )
+        return (
+            self.token_to_kv_pool.get_key_buffer(layer.layer_id),
+            self.token_to_kv_pool.get_value_buffer(layer.layer_id),
+            kv_indices,
+        )
+
     def _set_kv_buffer(
         self,
         forward_batch: ForwardBatch,
@@ -1885,14 +1923,20 @@ class TritonAttnBackend(AttentionBackend):
         ):
             return o
 
+        k_buffer, v_buffer, kv_indices = self._extend_prefix_kv(
+            layer=layer,
+            forward_batch=forward_batch,
+            kv_indices=kv_indices,
+            dtype=q.dtype,
+        )
         self._forward_extend_kernel(
             layer,
             q.view(-1, layer.tp_q_head_num, layer.qk_head_dim),
             k.contiguous() if self.dllm_attention is None else k,
             v.contiguous() if self.dllm_attention is None else v,
             o.view(-1, layer.tp_q_head_num, layer.v_head_dim),
-            self.token_to_kv_pool.get_key_buffer(layer.layer_id),
-            self.token_to_kv_pool.get_value_buffer(layer.layer_id),
+            k_buffer,
+            v_buffer,
             self.forward_metadata.qo_indptr,
             kv_indptr,
             kv_indices,
@@ -2381,6 +2425,27 @@ class TritonAttnBackend(AttentionBackend):
             and layer.v_head_dim == self.swa_v_head_dim
         ):
             attn_logits = self.forward_metadata.swa_attn_logits
+
+        if self.int8_fused_decode:
+            if score_mod is not None:
+                raise NotImplementedError(
+                    "int8_per_token_head decode does not support score_mod."
+                )
+            self.forward_decode_int8(
+                pool=self.token_to_kv_pool,
+                layer=layer,
+                q=q,
+                o=o,
+                kv_indptr=kv_indptr,
+                kv_indices=kv_indices,
+                attn_logits=attn_logits,
+                attn_lse=self.forward_metadata.attn_lse,
+                num_kv_splits=self.forward_metadata.num_kv_splits,
+                max_kv_splits=self.max_kv_splits,
+                logit_cap=logits_soft_cap,
+                sinks=sinks,
+            )
+            return o
 
         # Resolve Work-Centric (Lean) Attention activation. In auto mode (None) the decision
         # depends on whether this forward is a CUDA-graph capture: during capture seq_lens are

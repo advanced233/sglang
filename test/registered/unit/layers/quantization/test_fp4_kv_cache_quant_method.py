@@ -451,11 +451,16 @@ class TestInt8PerTokenHeadKVCacheMethod(CustomTestCase):
         self.assertTrue(m.needs_plain_kv_dequant_read())
         self.assertFalse(m.needs_dequant_workspace())
         self.assertEqual(m.plain_attention_kv_dtype(), torch.bfloat16)
+        # Triton decode reads int8 + scales in-kernel; extend still dequantizes.
+        self.assertEqual(
+            m.resolve_attention_access("prefill", "triton").kind,
+            KVCacheAttentionAccessKind.PLAIN,
+        )
+        self.assertEqual(
+            m.resolve_attention_access("decode", "triton").kind,
+            KVCacheAttentionAccessKind.FUSED_DEQUANT,
+        )
         for phase in ("prefill", "decode"):
-            self.assertEqual(
-                m.resolve_attention_access(phase, "triton").kind,
-                KVCacheAttentionAccessKind.PLAIN,
-            )
             self.assertIsNone(m.resolve_attention_access(phase, "flashinfer"))
 
     def test_cell_size_matches_allocation(self):

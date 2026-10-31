@@ -38,7 +38,7 @@ FP4 quantization is currently experimental.
 ### INT8 Per-Token-Head Format
 
 <Warning>
-INT8 KV cache is currently experimental. It requires `--attention-backend triton` and MHA models, and attention still reads a dequantized BF16 copy of each layer, so it saves capacity but not decode time yet.
+INT8 KV cache is currently experimental. It requires `--attention-backend triton`, page size 1, and MHA models. Decode reads the INT8 cache directly in the attention kernel; prefill dequantizes only the prefix rows it reads.
 </Warning>
 
 - **`int8_per_token_head`**: Symmetric INT8 with one FP32 scale per token and KV head (absmax / 127), the same recipe as vLLM's `int8_per_token_head`. It works on GPUs without FP8 support, such as A100.

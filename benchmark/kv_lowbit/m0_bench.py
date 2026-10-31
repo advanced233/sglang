@@ -11,6 +11,8 @@ Groups (run in the order given by --groups):
         so the two FP4 points give the TPOT-vs-pool-size slope
   vllm  vLLM BF16 / int8_per_token_head / int4_per_token_head on TRITON_ATTN,
         same 16k points as main
+  m3b   SGLang BF16 and int8_per_token_head on Triton (M3b fused decode), same
+        sweep plus the decode probe on both
 
 Every server runs on one GPU in its own process group, listens on 127.0.0.1 on a
 free port, and is stopped by signalling that group only. GPU telemetry
@@ -69,6 +71,10 @@ CONFIGS = {
             "0.7",
         ],
     ),
+    "sglang-int8-triton": (
+        "sglang",
+        ["--attention-backend", "triton", "--kv-cache-dtype", "int8_per_token_head"],
+    ),
     "vllm-bf16-triton": ("vllm", []),
     "vllm-int8-triton": ("vllm", ["--kv-cache-dtype", "int8_per_token_head"]),
     "vllm-int4-triton": ("vllm", ["--kv-cache-dtype", "int4_per_token_head"]),
@@ -81,9 +87,15 @@ GROUP_CONFIGS = {
         "sglang-fp4mx-triton",
     ],
     "vllm": ["vllm-bf16-triton", "vllm-int8-triton", "vllm-int4-triton"],
+    # M3b: fused INT8 decode against BF16, both on Triton.
+    "m3b": ["sglang-bf16-triton", "sglang-int8-triton"],
 }
 # Main-group servers that also run the decode probe at their default pool size.
-DECODE_PROBE_CONFIGS = ("sglang-bf16-triton", "sglang-fp4mx-triton")
+DECODE_PROBE_CONFIGS = (
+    "sglang-bf16-triton",
+    "sglang-fp4mx-triton",
+    "sglang-int8-triton",
+)
 # Extra servers for the pool group. Two FP4 points fix the slope of the
 # whole-layer dequant cost; BF16 reads only the used tokens, so one point does.
 EXTRA_POOL_SIZES = {"sglang-fp4mx-triton": [40000]}
@@ -626,7 +638,7 @@ def run_sweep(session, *, group, config):
         if ctx is None:
             return
         _sweep(session, ctx=ctx, group=group, config=config)
-        if group != "main":
+        if group not in ("main", "m3b"):
             return
         if config in DECODE_PROBE_CONFIGS:
             _decode_probe(
@@ -636,7 +648,11 @@ def run_sweep(session, *, group, config):
                 tag=config,
                 pool_tokens=ctx["info"].get("capacity_tokens"),
             )
-        if config in PROFILE_CONFIGS and not session.args.no_profile:
+        if (
+            group == "main"
+            and config in PROFILE_CONFIGS
+            and not session.args.no_profile
+        ):
             _profile(session, ctx=ctx, config=config, tag=f"{config}-profile")
 
 
@@ -818,7 +834,7 @@ def main():
         write_env(session)
     selected = set(args.configs.split(",")) if args.configs else set(CONFIGS)
     for group in args.groups.split(","):
-        if group in ("main", "vllm"):
+        if group in GROUP_CONFIGS:
             for config in GROUP_CONFIGS[group]:
                 if config in selected:
                     run_sweep(session, group=group, config=config)

@@ -58,6 +58,9 @@ class KVCacheAttentionAccessKind(str, Enum):
     DEQUANT_WORKSPACE = "dequant_workspace"
     # Attention backend directly consumes FP4 KV cache storage and scales.
     NATIVE_FP4 = "native_fp4"
+    # The attention kernel reads the quantized KV and its scales from the pool
+    # and dequantizes in registers; no dequantized copy is made.
+    FUSED_DEQUANT = "fused_dequant"
 
 
 @dataclass(frozen=True)
@@ -1029,6 +1032,7 @@ _DECODE = KVCacheAttentionPhase.DECODE
 _PLAIN_KIND = KVCacheAttentionAccessKind.PLAIN
 _DQ_WORKSPACE_KIND = KVCacheAttentionAccessKind.DEQUANT_WORKSPACE
 _NATIVE_FP4_KIND = KVCacheAttentionAccessKind.NATIVE_FP4
+_FUSED_DEQUANT_KIND = KVCacheAttentionAccessKind.FUSED_DEQUANT
 _ANY_BACKEND = KVCacheBackendMatcher(any_backend=True)
 _NVFP4_SCALE = "nvfp4"
 _FP4_MX_SCALE = "fp4_mx_block16"
@@ -1103,6 +1107,22 @@ def _native_fp4(
     )
 
 
+def _fused_dequant(
+    phase: KVCacheAttentionPhase,
+    backends,
+    scale: str,
+    storage_dtype: torch.dtype,
+) -> KVCacheAttentionAccess:
+    return KVCacheAttentionAccess(
+        phase,
+        _FUSED_DEQUANT_KIND,
+        _backend_matcher(backends),
+        storage_dtype=storage_dtype,
+        attention_kv_dtype=storage_dtype,
+        scale_recipe=scale,
+    )
+
+
 KV_CACHE_ATTENTION_ACCESS_REGISTRY: dict[str, tuple[KVCacheAttentionAccess, ...]] = {
     UnquantizedKVCacheMethod.name: (
         _plain(_PREFILL, _ANY_BACKEND),
@@ -1129,12 +1149,8 @@ KV_CACHE_ATTENTION_ACCESS_REGISTRY: dict[str, tuple[KVCacheAttentionAccess, ...]
             _BF16,
             storage_dtype=torch.int8,
         ),
-        _plain(
-            _DECODE,
-            _INT8_PTH_BACKENDS,
-            _INT8_PTH_SCALE,
-            _BF16,
-            storage_dtype=torch.int8,
+        _fused_dequant(
+            _DECODE, _INT8_PTH_BACKENDS, _INT8_PTH_SCALE, storage_dtype=torch.int8
         ),
     ),
 }

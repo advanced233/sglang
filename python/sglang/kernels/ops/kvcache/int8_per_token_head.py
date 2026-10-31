@@ -5,6 +5,8 @@ Pool layout: data ``[slots, heads, head_dim]`` int8 and one fp32 scale per
 vLLM's ``int8_per_token_head`` writer.
 """
 
+from typing import Optional
+
 import torch
 import triton
 import triton.language as tl
@@ -114,39 +116,63 @@ def _dequant_kernel(
     src_ptr,
     scale_ptr,
     out_ptr,
+    slots_ptr,
     num_rows,
+    NUM_HEADS: tl.constexpr,
     HEAD_DIM: tl.constexpr,
     BLOCK_D: tl.constexpr,
     ROWS: tl.constexpr,
+    GATHER: tl.constexpr,
 ):
+    # A row is one (slot, head) pair; with GATHER, output slot i reads slots[i].
     rows = tl.program_id(0).to(tl.int64) * ROWS + tl.arange(0, ROWS)
+    row_mask = rows < num_rows
+    if GATHER:
+        slot = tl.load(slots_ptr + rows // NUM_HEADS, mask=row_mask, other=0)
+        src_rows = slot.to(tl.int64) * NUM_HEADS + rows % NUM_HEADS
+    else:
+        src_rows = rows
     offs = tl.arange(0, BLOCK_D)
-    mask = (rows < num_rows)[:, None] & (offs < HEAD_DIM)[None, :]
-    ptrs = rows[:, None] * HEAD_DIM + offs[None, :]
-    x = tl.load(src_ptr + ptrs, mask=mask, other=0).to(tl.float32)
-    scale = tl.load(scale_ptr + rows, mask=rows < num_rows, other=0.0)
-    y = x * scale[:, None]
-    tl.store(out_ptr + ptrs, y.to(out_ptr.dtype.element_ty), mask=mask)
+    mask = row_mask[:, None] & (offs < HEAD_DIM)[None, :]
+    x = tl.load(
+        src_ptr + src_rows[:, None] * HEAD_DIM + offs[None, :], mask=mask, other=0
+    )
+    scale = tl.load(scale_ptr + src_rows, mask=row_mask, other=0.0)
+    y = x.to(tl.float32) * scale[:, None]
+    out_ptrs = out_ptr + rows[:, None] * HEAD_DIM + offs[None, :]
+    tl.store(out_ptrs, y.to(out_ptr.dtype.element_ty), mask=mask)
 
 
 def dequant_int8_per_token_head(
-    *, data: torch.Tensor, scale: torch.Tensor, dtype: torch.dtype
+    *,
+    data: torch.Tensor,
+    scale: torch.Tensor,
+    dtype: torch.dtype,
+    slots: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
-    """Dequantize ``data`` ``[..., heads, dim]`` with ``scale`` ``[..., heads]``."""
+    """Dequantize ``data`` ``[slots, heads, dim]`` with ``scale`` ``[slots, heads]``.
+
+    With ``slots``, only those slots are dequantized, in that order:
+    the result is ``[len(slots), heads, dim]``.
+    """
     assert data.is_contiguous() and scale.is_contiguous()
     assert data.shape[:-1] == scale.shape
-    out = torch.empty(data.shape, dtype=dtype, device=data.device)
-    head_dim = data.shape[-1]
-    num_rows = scale.numel()
+    num_heads, head_dim = data.shape[-2], data.shape[-1]
+    out_shape = data.shape if slots is None else (slots.numel(), *data.shape[1:])
+    out = torch.empty(out_shape, dtype=dtype, device=data.device)
+    num_rows = out.numel() // head_dim
     if num_rows == 0:
         return out
     _dequant_kernel[(triton.cdiv(num_rows, _DEQUANT_ROWS),)](
         data,
         scale,
         out,
+        slots,
         num_rows,
+        NUM_HEADS=num_heads,
         HEAD_DIM=head_dim,
         BLOCK_D=triton.next_power_of_2(head_dim),
         ROWS=_DEQUANT_ROWS,
+        GATHER=slots is not None,
     )
     return out
