@@ -322,12 +322,8 @@ def _run_kernel_bench(args):
                 num_q_heads=hq,
                 num_kv_heads=hkv,
             )
-            k_deq_all = (
-                k_buf_i8[1:].float() * k_scale[1:, :, None]
-            ).to(torch.bfloat16)
-            v_deq_all = (
-                v_buf_i8[1:].float() * v_scale[1:, :, None]
-            ).to(torch.bfloat16)
+            k_deq_all = k_buf_i8[1:].float() * k_scale[1:, :, None]
+            v_deq_all = v_buf_i8[1:].float() * v_scale[1:, :, None]
             ref_chunk_q = _chunked_reference_extend(
                 q=q,
                 k_all=k_deq_all,
@@ -338,8 +334,8 @@ def _run_kernel_bench(args):
                 num_q_heads=hq,
                 num_kv_heads=hkv,
             )
-            k_mix = k_4d.clone()
-            v_mix = v_4d.clone()
+            k_mix = k_4d.float().clone()
+            v_mix = v_4d.float().clone()
             if prefix > 0:
                 k_mix[:, :prefix] = k_deq_all.view(batch, total_kv, hkv, d)[:, :prefix]
                 v_mix[:, :prefix] = v_deq_all.view(batch, total_kv, hkv, d)[:, :prefix]

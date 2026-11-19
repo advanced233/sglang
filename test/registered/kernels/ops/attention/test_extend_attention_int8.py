@@ -375,19 +375,23 @@ def test_regular_and_unified_match_when_chunk_is_dequantized():
         b["extend_kv_indices"],
         3,
     )
+    # Use fp16 (10-bit mantissa) rather than bf16 (7-bit mantissa) so the
+    # dequantized int8 chunk does not lose precision relative to the in-kernel
+    # int8 -> fp16 path.
+    q_f16 = b["q_extend"].to(torch.float16)
     k_ext_dq = _dequant_rows(b["k_cache"], b["k_scale"], b["extend_kv_indices"]).to(
-        torch.bfloat16
+        torch.float16
     )
     v_ext_dq = _dequant_rows(b["v_cache"], b["v_scale"], b["extend_kv_indices"]).to(
-        torch.bfloat16
+        torch.float16
     )
 
-    o_reg = torch.empty_like(b["q_extend"])
-    o_uni = torch.empty_like(b["q_extend"])
+    o_reg = torch.empty_like(q_f16)
+    o_uni = torch.empty_like(q_f16)
     sm_scale = 128**-0.5
 
     extend_attention_fwd_int8(
-        q_extend=b["q_extend"],
+        q_extend=q_f16,
         k_extend=k_ext_dq,
         v_extend=v_ext_dq,
         o_extend=o_reg,
@@ -405,7 +409,7 @@ def test_regular_and_unified_match_when_chunk_is_dequantized():
         sm_scale=sm_scale,
     )
     extend_attention_fwd_unified_int8(
-        q=b["q_extend"],
+        q=q_f16,
         o=o_uni,
         k_buffer=b["k_cache"],
         v_buffer=b["v_cache"],
@@ -419,7 +423,7 @@ def test_regular_and_unified_match_when_chunk_is_dequantized():
         sm_scale=sm_scale,
         is_causal=True,
     )
-    torch.testing.assert_close(o_reg.float(), o_uni.float(), atol=1e-2, rtol=2e-2)
+    torch.testing.assert_close(o_reg.float(), o_uni.float(), atol=5e-3, rtol=1e-2)
 
 
 if __name__ == "__main__":

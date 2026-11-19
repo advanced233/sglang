@@ -1347,6 +1347,7 @@ class TestTritonAttention(CustomTestCase):
             store_int8_per_token_head_kv,
         )
 
+        self._set_all_seeds(0)
         device = get_device()
         dtype = torch.bfloat16
 
@@ -1405,8 +1406,8 @@ class TestTritonAttention(CustomTestCase):
                 max_kv_splits=4,
                 sm_scale=sm_scale,
             )
-            k_dq = (k_buf.float() * k_scale[:, :, None]).to(dtype)
-            v_dq = (v_buf.float() * v_scale[:, :, None]).to(dtype)
+            k_dq = k_buf.float() * k_scale[:, :, None]
+            v_dq = v_buf.float() * v_scale[:, :, None]
             ref = decode_attention_fwd_torch(
                 q, k_dq, v_dq, kv_indptr, slots.to(torch.int32), sm_scale
             )
@@ -1480,8 +1481,8 @@ class TestTritonAttention(CustomTestCase):
             max_len_extend=max(extend_lens),
             sm_scale=head_dim**-0.5,
         )
-        k_dq = (k_buf.float() * k_scale[:, :, None]).to(dtype)
-        v_dq = (v_buf.float() * v_scale[:, :, None]).to(dtype)
+        k_dq = k_buf.float() * k_scale[:, :, None]
+        v_dq = v_buf.float() * v_scale[:, :, None]
         o_reg_ref = torch.empty_like(q_ext, dtype=torch.float32)
         extend_attention_fwd_torch(
             q_ext.float(),
