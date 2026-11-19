@@ -24,17 +24,31 @@ from sglang.kernels.ops.attention.decode_attention_int8 import (
 )
 
 
-def _default_extend_tile(head_dim: int) -> tuple[int, int, int, int]:
-    """Return ``(block_m, block_n, num_warps, num_stages)`` for a head dim.
+def _default_extend_tile_regular(head_dim: int) -> tuple[int, int, int, int]:
+    """Return ``(block_m, block_n, num_warps, num_stages)`` for 2-stage extend.
 
-    ``num_stages=1`` matches SGLang's BF16 A100 extend kernel and avoids
-    register spilling when holding fp32 accumulators alongside int8->fp16
-    dequantization registers.
+    ``(64, 128, 4, 1)`` keeps the fp32 accumulator compact alongside Stage 2's
+    BF16 loop while streaming 128 keys per prefix step (measured fastest on A100).
     """
     if head_dim <= 64:
         return 64, 64, 4, 1
     if head_dim <= 128:
-        return 128, 64, 8, 1
+        return 64, 128, 4, 1
+    if head_dim <= 256:
+        return 64, 64, 4, 1
+    return 32, 32, 4, 1
+
+
+def _default_extend_tile_unified(head_dim: int) -> tuple[int, int, int, int]:
+    """Return ``(block_m, block_n, num_warps, num_stages)`` for 1-stage unified extend.
+
+    ``(64, 64, 4, 2)`` fits 2 software-pipelined stages without spilling and
+    outperforms BF16 extend on A100 at 0 MB temporary memory.
+    """
+    if head_dim <= 64:
+        return 64, 64, 4, 2
+    if head_dim <= 128:
+        return 64, 64, 4, 2
     if head_dim <= 256:
         return 64, 64, 4, 1
     return 32, 32, 4, 1
@@ -145,31 +159,31 @@ def _fwd_extend_kernel_int8(
         for start_n in range(0, cur_seq_len_prefix, BLOCK_N_PREFIX):
             start_n = tl.multiple_of(start_n, BLOCK_N_PREFIX)
             mask_n = (start_n + offs_n_prefix) < cur_seq_len_prefix
-            final_mask = mask_m[:, None] & mask_n[None, :]
-
-            if USE_CUSTOM_MASK and not SKIP_PREFIX_CUSTOM_MASK:
-                custom_mask = tl.load(
-                    mask_ptr
-                    + cur_seq_mask_start_idx
-                    + (cur_block_m * BLOCK_M + offs_m[:, None])
-                    * (cur_seq_len + window_kv_offset)
-                    + window_kv_offset
-                    + start_n
-                    + offs_n_prefix[None, :],
-                    mask=mask_m[:, None] & mask_n[None, :],
-                    other=0,
-                )
-                final_mask &= custom_mask != 0
-            if SLIDING_WINDOW_SIZE > 0:
-                window_mask = (
-                    cur_seq_len_prefix + cur_block_m * BLOCK_M + offs_m[:, None]
-                ) <= (start_n + offs_n_prefix[None, :] + SLIDING_WINDOW_SIZE)
-                final_mask &= window_mask
+            HAS_2D_PREFIX_MASK: tl.constexpr = (
+                USE_CUSTOM_MASK and not SKIP_PREFIX_CUSTOM_MASK
+            ) or SLIDING_WINDOW_SIZE > 0
 
             SKIP_TILE = False
-            if (
-                USE_CUSTOM_MASK and not SKIP_PREFIX_CUSTOM_MASK
-            ) or SLIDING_WINDOW_SIZE > 0:
+            if HAS_2D_PREFIX_MASK:
+                final_mask = mask_m[:, None] & mask_n[None, :]
+                if USE_CUSTOM_MASK and not SKIP_PREFIX_CUSTOM_MASK:
+                    custom_mask = tl.load(
+                        mask_ptr
+                        + cur_seq_mask_start_idx
+                        + (cur_block_m * BLOCK_M + offs_m[:, None])
+                        * (cur_seq_len + window_kv_offset)
+                        + window_kv_offset
+                        + start_n
+                        + offs_n_prefix[None, :],
+                        mask=mask_m[:, None] & mask_n[None, :],
+                        other=0,
+                    )
+                    final_mask &= custom_mask != 0
+                if SLIDING_WINDOW_SIZE > 0:
+                    window_mask = (
+                        cur_seq_len_prefix + cur_block_m * BLOCK_M + offs_m[:, None]
+                    ) <= (start_n + offs_n_prefix[None, :] + SLIDING_WINDOW_SIZE)
+                    final_mask &= window_mask
                 SKIP_TILE = (
                     tl.max(tl.max(final_mask.to(tl.int32), axis=1), axis=0) == 0
                 )
@@ -197,7 +211,10 @@ def _fwd_extend_kernel_int8(
                 qk *= (k_scale * sm_scale)[None, :]
                 if logit_cap > 0:
                     qk = logit_cap * tanh(qk / logit_cap)
-                qk = tl.where(final_mask, qk, float("-inf"))
+                if HAS_2D_PREFIX_MASK:
+                    qk = tl.where(final_mask, qk, float("-inf"))
+                else:
+                    qk = tl.where(mask_n[None, :], qk, float("-inf"))
 
                 row_max = tl.max(qk, 1)
                 row_max_fixed = tl.where(row_max == float("-inf"), -1e20, row_max)
@@ -386,7 +403,7 @@ def extend_attention_fwd_int8(
     head_num = q_extend.shape[1]
     kv_group_num = head_num // k_buffer.shape[1]
 
-    def_m, def_n, def_warps, def_stages = _default_extend_tile(max(Lq, Lv))
+    def_m, def_n, def_warps, def_stages = _default_extend_tile_regular(max(Lq, Lv))
     BLOCK_M = def_m if block_m is None else block_m
     BLOCK_N = def_n if block_n is None else block_n
     BLOCK_N_PREFIX = BLOCK_N if block_n_prefix is None else block_n_prefix
@@ -593,7 +610,7 @@ def _fwd_extend_unified_kernel_int8(
             n_e_max = tl.maximum(row_max, e_max)
             re_scale = tl.exp(e_max - n_e_max)
             p = tl.exp(qk - n_e_max[:, None])
-            deno = deno * re_scale + tl.sum(p, 1)
+            deno = tl.fma(deno, re_scale, tl.sum(p, 1))
 
             v = tl.load(
                 V_Buffer + offs_kv_loc[:, None] * stride_buf_vbs + base_v,
@@ -603,10 +620,15 @@ def _fwd_extend_unified_kernel_int8(
             v_scale = tl.load(
                 V_Scale + offs_kv_loc * stride_vs_bs + cur_kv_head,
             )
+            # Use IEEE-754 div_rn and explicit fma in both Phase 1 and Phase 2
+            # so a full tile produces bit-identical results regardless of which
+            # phase executes it (Triton's `/` otherwise lowers 1D/scalar and
+            # 2D/1D divisions with different reciprocal rounding).
             v_scale_max = tl.maximum(tl.max(v_scale, 0), 1e-30)
-            p_v = (p * (v_scale / v_scale_max)[None, :]).to(tl.float16)
+            v_scale_norm = tl.div_rn(v_scale, v_scale_max)
+            p_v = (p * v_scale_norm[None, :]).to(tl.float16)
             pv = tl.dot(p_v, _int8_to_f16(v, CONVERT))
-            acc = acc * re_scale[:, None] + pv * v_scale_max
+            acc = tl.fma(acc, re_scale[:, None], pv * v_scale_max)
             e_max = n_e_max
 
     # Phase 2: diagonal / tail / custom-mask / sliding-window tiles.
@@ -677,7 +699,7 @@ def _fwd_extend_unified_kernel_int8(
 
             re_scale = tl.exp(e_max - n_e_max)
             p = tl.exp(qk - n_e_max[:, None])
-            deno = deno * re_scale + tl.sum(p, 1)
+            deno = tl.fma(deno, re_scale, tl.sum(p, 1))
 
             v = tl.load(
                 V_Buffer + offs_kv_loc[:, None] * stride_buf_vbs + base_v,
@@ -693,9 +715,10 @@ def _fwd_extend_unified_kernel_int8(
             # tokens beyond cur_seq_kv_len) never influence v_scale_max.
             v_scale_masked = tl.where(final_mask, v_scale[None, :], 0.0)
             v_scale_max = tl.maximum(tl.max(v_scale_masked, 1), 1e-30)
-            p_v = (p * (v_scale_masked / v_scale_max[:, None])).to(tl.float16)
+            v_scale_norm = tl.div_rn(v_scale_masked, v_scale_max[:, None])
+            p_v = (p * v_scale_norm).to(tl.float16)
             pv = tl.dot(p_v, _int8_to_f16(v, CONVERT))
-            acc = acc * re_scale[:, None] + pv * v_scale_max[:, None]
+            acc = tl.fma(acc, re_scale[:, None], pv * v_scale_max[:, None])
             e_max = n_e_max
 
     if HAS_SINK:
@@ -763,7 +786,7 @@ def extend_attention_fwd_unified_int8(
     if sliding_window_size > 0 and window_start_pos is None:
         window_start_pos = torch.zeros(batch_size, dtype=torch.int32, device=q.device)
 
-    def_m, def_n, def_warps, def_stages = _default_extend_tile(max(Lq, Lv))
+    def_m, def_n, def_warps, def_stages = _default_extend_tile_unified(max(Lq, Lv))
     BLOCK_M = def_m if block_m is None else block_m
     BLOCK_N = def_n if block_n is None else block_n
     warps = def_warps if num_warps is None else num_warps
