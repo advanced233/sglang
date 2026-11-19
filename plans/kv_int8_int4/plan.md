@@ -379,6 +379,26 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
     - 配方与后端接入：`Int8PerTokenHeadKVCacheMethod` 的 `prefill` 与 `decode` 均声明为 `FUSED_DEQUANT`（保留 `needs_plain_kv_dequant_read()` 对 plain 调用方的兼容）；`triton_int8_kv.py` 与 `triton_backend.py` 去掉了 M3b 的前缀取行反量化，接入上述两个融合 kernel；新增开关 `SGLANG_ENABLE_TRITON_INT8_UNIFIED_EXTEND`（默认关闭，保持 `chunk_bf16`）用于在非确定性模式下切换 `chunk_q` 语义。
     - 确定性模式：`handle_int8_kv_cache_compatibility` 放开 `--enable-deterministic-inference`；确定性模式下 extend 自动走 `extend_attention_fwd_unified_int8`，decode 走 `decode_attention_fwd_int8`（固定 `split_tile_size=256`）。
     - 文档与测试：更新 `docs/docs/advanced_features/quantized_kv_cache.mdx` 说明两种语义及默认 `chunk_bf16` 下 `prefill_cache_hit` KL 非零；新增 `test_extend_attention_int8.py`、补充 `test_triton_attention_kernels.py` 四路径用例与 `test_fp4_kv_cache_quant_method.py` 单测；新增 `benchmark/kv_lowbit/m3c_extend_eval.py`（冷 L2 extend 微基准 + 离线 KL 一致性评测）。
+  - **实测**（`results/a100-40g/20261120-003856/`、KL 对照 `20261119-202310/kl/`、16k 服务 `20261120-005934/`，Qwen3-8B，A100-PCIE-40GB，默认显存比例 0.823）：CPU 21 个、GPU extend 35 个（含 2-pass 非 64 对齐分块逐比特校验）、Triton attention 四路径用例全部通过。
+    - **冷 L2 extend 微基准**（32 Q / 8 KV / D=128）：优化 K 连续行主序加载（`[BLOCK_N, D]` + `tl.trans`）、按路径选用最优 tile（regular `64×128, w=4, s=1`，unified `64×64, w=4, s=2`）并将 unified 因果路径收口为单循环 + `is_full_tile` 快路径后：
+
+      | 形状 | BF16 regular | M3b gather（临时显存） | M3c fused-regular（0 MB） | M3c fused-unified（0 MB） |
+      |---|---:|---:|---:|---:|
+      | `prefix-hit`（4×8192+512） | 4.040 ms | 4.190 ms（134.5 MB） | 4.086 ms（1.03× vs M3b） | 4.618 ms |
+      | `late-chunk`（1×14336+2048） | 7.252 ms | 7.277 ms（58.8 MB） | 7.224 ms（1.01× vs M3b） | 8.149 ms |
+      | `fresh-prefill`（4×0+4096） | 6.216 ms | 6.216 ms（0 MB） | 7.437 ms | 8.922 ms（vs BF16 unified 14.293 ms，快 1.60×） |
+
+    - **离线 KL 一致性与数值语义**（32 条 1024-token 离线文档 prompt，512 输出）：
+
+      | 配置 | `match` Avg KL | `prefill_cache_hit` | `decode_cache_hit` | `prefill_cached_vs_fresh`（>1e-4） |
+      |---|---:|---:|---:|---:|
+      | `int8-chunk-bf16`（默认） | 1.45e-3 | 1.38e-3 | 7.52e-4 | 1.62e-3（19.70%） |
+      | `int8-chunk-q`（unified 开关） | 2.11e-4 | 3.71e-4 | 1.32e-4 | 8.00e-5（1.38%） |
+      | `int8-det`（确定性模式） | 1.53e-4 | 1.53e-4 | 1.25e-4 | **0（0.00%，Max Δlogp = 0）** |
+      | `bf16-det`（BF16 基线） | 1.68e-4 | 1.68e-4 | 5.65e-5 | **0（0.00%）** |
+
+      - 语义取舍结论：保持默认 `chunk_bf16`（端到端 prefill 最快且与 SGLang 默认 BF16/FP8 一致），`chunk_q` 通过 `SGLANG_ENABLE_TRITON_INT8_UNIFIED_EXTEND=1` 提供，开启 `--enable-deterministic-inference` 时自动启用 unified 路径并在前缀命中 vs 全量 prefill 上做到与 `bf16-det` 一致的逐比特归零。
+    - **16k 端到端服务**（16384 输入、1024 输出，默认显存比例 0.823）：容量 237,905 token（1.96× BF16），并发 6 中位 TTFT **5837 ms**（优于 M3b 5868 ms，较未调优初版 8335 ms 降低 2498 ms）、ITL **19.53 ms**（快过 BF16 23.85 ms 1.22×）、输出吞吐 **187.0 tok/s**；最大并发 13 输出 **230.5 tok/s**（1.38× BF16）、ITL 27.27 ms；1k 并发 1 探测 ITL 13.09 ms，零回退且彻底消除每层 58–135 MB 前缀临时显存。
 
 1. **新的访问方式**：在 `KVCacheAttentionAccessKind` 里新增一种（名字和形状要和维护者商量），让池子把原始的 int8 buffer 和 scale buffer 直接交给后端，不再走整层反量化。
    - 这是 API 改动。实现之前先在上游开一个 RFC issue，说明动机：Ampere 上没有低比特 KV，而 `fp4_mx_block16` 在 Triton 后端上是整层反量化。
