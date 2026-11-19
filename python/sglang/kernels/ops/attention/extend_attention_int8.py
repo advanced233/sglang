@@ -27,14 +27,14 @@ from sglang.kernels.ops.attention.decode_attention_int8 import (
 def _default_extend_tile(head_dim: int) -> tuple[int, int, int, int]:
     """Return ``(block_m, block_n, num_warps, num_stages)`` for a head dim.
 
-    At head_dim <= 128, BLOCK_M=128 with BLOCK_N=64 halves prefix HBM reads per
-    query row compared to BLOCK_M=64 while keeping shared memory (<= 96 KB at
-    2 stages) and register pressure comfortable on Ampere (sm80/sm86) and newer.
+    ``num_stages=1`` matches SGLang's BF16 A100 extend kernel and avoids
+    register spilling when holding fp32 accumulators alongside int8->fp16
+    dequantization registers.
     """
     if head_dim <= 64:
-        return 64, 64, 4, 2
+        return 64, 64, 4, 1
     if head_dim <= 128:
-        return 128, 64, 8, 2
+        return 128, 64, 8, 1
     if head_dim <= 256:
         return 64, 64, 4, 1
     return 32, 32, 4, 1
@@ -126,19 +126,20 @@ def _fwd_extend_kernel_int8(
         + cur_head * stride_qh
         + offs_d[None, :]
     )
-    q = tl.load(
-        Q_Extend + offs_q, mask=(mask_m[:, None]) & (mask_d[None, :]), other=0.0
-    )
 
     acc = tl.zeros([BLOCK_M, BLOCK_DV], dtype=tl.float32)
     deno = tl.zeros([BLOCK_M], dtype=tl.float32)
     e_max = tl.zeros([BLOCK_M], dtype=tl.float32) - float("inf")
 
     # Stage 1: attend to the cached prefix in the int8 KV pool.
+    # Load q_f16 only inside Stage 1 so q (bf16) and q_f16 (fp16) are never
+    # simultaneously live in registers.
     if cur_seq_len_prefix > 0:
-        q_f16 = q.to(tl.float16)
+        q_f16 = tl.load(
+            Q_Extend + offs_q, mask=(mask_m[:, None]) & (mask_d[None, :]), other=0.0
+        ).to(tl.float16)
         offs_n_prefix = tl.arange(0, BLOCK_N_PREFIX)
-        base_k = cur_kv_head * stride_buf_kh + offs_d[:, None]
+        base_k = cur_kv_head * stride_buf_kh + offs_d[None, :]
         base_v = cur_kv_head * stride_buf_vh + offs_dv[None, :]
 
         for start_n in range(0, cur_seq_len_prefix, BLOCK_N_PREFIX):
@@ -180,9 +181,11 @@ def _fwd_extend_kernel_int8(
                     other=0,
                 ).to(tl.int64)
 
-                k = tl.load(
-                    K_Buffer + offs_kv_loc[None, :] * stride_buf_kbs + base_k,
-                    mask=mask_n[None, :] & mask_d[:, None],
+                # Load K in contiguous [BLOCK_N_PREFIX, BLOCK_DMODEL] layout for
+                # vectorized 128-bit loads and contiguous pack=4 conversion.
+                k_t = tl.load(
+                    K_Buffer + offs_kv_loc[:, None] * stride_buf_kbs + base_k,
+                    mask=mask_n[:, None] & mask_d[None, :],
                     other=0,
                 )
                 k_scale = tl.load(
@@ -190,7 +193,7 @@ def _fwd_extend_kernel_int8(
                     mask=mask_n,
                     other=0.0,
                 )
-                qk = tl.dot(q_f16, _int8_to_f16(k, CONVERT))
+                qk = tl.dot(q_f16, tl.trans(_int8_to_f16(k_t, CONVERT)))
                 qk *= (k_scale * sm_scale)[None, :]
                 if logit_cap > 0:
                     qk = logit_cap * tanh(qk / logit_cap)
@@ -223,6 +226,9 @@ def _fwd_extend_kernel_int8(
                 e_max = n_e_max
 
     # Stage 2: attend to the current chunk's unquantized K_Extend / V_Extend.
+    q = tl.load(
+        Q_Extend + offs_q, mask=(mask_m[:, None]) & (mask_d[None, :]), other=0.0
+    )
     offs_n = tl.arange(0, BLOCK_N)
     cur_block_m_end = (
         cur_seq_len_extend
@@ -485,6 +491,14 @@ def _fwd_extend_unified_kernel_int8(
     Tile boundaries over KV start at position 0 in fixed ``BLOCK_N`` steps so
     the reduction order for any query position is independent of how the prompt
     was split between prefix cache and current extend chunk.
+
+    For standard causal attention, strictly-valid prefix tiles run in a
+    mask-free fast loop (Phase 1) and only the diagonal/tail tiles run with
+    per-row causal masking and per-row masked ``v_scale_max`` (Phase 2). That
+    both eliminates 2D mask register pressure on >90% of tiles and guarantees
+    future keys beyond ``q_abs`` or ``cur_seq_kv_len`` never leak into
+    ``v_scale_max``, preserving bit-exactness across arbitrary chunked-prefill
+    splits.
     """
     cur_seq = tl.program_id(0)
     cur_head = tl.program_id(1)
@@ -523,11 +537,12 @@ def _fwd_extend_unified_kernel_int8(
         + cur_head * stride_qh
         + offs_d[None, :]
     )
-    q = tl.load(Q + offs_q, mask=mask_m[:, None] & mask_d[None, :], other=0.0)
-    q = q.to(tl.float16)
+    q = tl.load(Q + offs_q, mask=mask_m[:, None] & mask_d[None, :], other=0.0).to(
+        tl.float16
+    )
 
     offs_n = tl.arange(0, BLOCK_N)
-    base_k = cur_kv_head * stride_buf_kh + offs_d[:, None]
+    base_k = cur_kv_head * stride_buf_kh + offs_d[None, :]
     base_v = cur_kv_head * stride_buf_vh + offs_dv[None, :]
 
     acc = tl.zeros([BLOCK_M, BLOCK_DV], dtype=tl.float32)
@@ -546,7 +561,56 @@ def _fwd_extend_unified_kernel_int8(
             )
             start_k = (start_k // BLOCK_N) * BLOCK_N
 
-    for start_n in range(start_k, end_k, BLOCK_N):
+    # Phase 1: strictly full causal tiles (all BLOCK_N keys < first_query_abs
+    # and < cur_seq_kv_len). Every query row sees all BLOCK_N keys, so 1D
+    # v_scale_max matches per-row masked v_scale_max bit-for-bit.
+    full_end_k = start_k
+    if IS_CAUSAL and not USE_CUSTOM_MASK and SLIDING_WINDOW_SIZE <= 0:
+        first_query_abs = cur_seq_prefix_len + cur_block_m * BLOCK_M
+        full_limit = tl.minimum(first_query_abs, cur_seq_kv_len)
+        full_end_k = tl.maximum((full_limit // BLOCK_N) * BLOCK_N, start_k)
+
+        for start_n in range(start_k, full_end_k, BLOCK_N):
+            start_n = tl.multiple_of(start_n, BLOCK_N)
+            offs_kv_loc = tl.load(
+                kv_indices + cur_seq_kv_start_idx + start_n + offs_n
+            ).to(tl.int64)
+
+            k_t = tl.load(
+                K_Buffer + offs_kv_loc[:, None] * stride_buf_kbs + base_k,
+                mask=mask_d[None, :],
+                other=0,
+            )
+            k_scale = tl.load(
+                K_Scale + offs_kv_loc * stride_ks_bs + cur_kv_head,
+            )
+            qk = tl.dot(q, tl.trans(_int8_to_f16(k_t, CONVERT)))
+            qk *= (k_scale * sm_scale)[None, :]
+            if logit_cap > 0:
+                qk = logit_cap * tanh(qk / logit_cap)
+
+            row_max = tl.max(qk, 1)
+            n_e_max = tl.maximum(row_max, e_max)
+            re_scale = tl.exp(e_max - n_e_max)
+            p = tl.exp(qk - n_e_max[:, None])
+            deno = deno * re_scale + tl.sum(p, 1)
+
+            v = tl.load(
+                V_Buffer + offs_kv_loc[:, None] * stride_buf_vbs + base_v,
+                mask=mask_dv[None, :],
+                other=0,
+            )
+            v_scale = tl.load(
+                V_Scale + offs_kv_loc * stride_vs_bs + cur_kv_head,
+            )
+            v_scale_max = tl.maximum(tl.max(v_scale, 0), 1e-30)
+            p_v = (p * (v_scale / v_scale_max)[None, :]).to(tl.float16)
+            pv = tl.dot(p_v, _int8_to_f16(v, CONVERT))
+            acc = acc * re_scale[:, None] + pv * v_scale_max
+            e_max = n_e_max
+
+    # Phase 2: diagonal / tail / custom-mask / sliding-window tiles.
+    for start_n in range(full_end_k, end_k, BLOCK_N):
         start_n = tl.multiple_of(start_n, BLOCK_N)
         mask_n = (start_n + offs_n) < cur_seq_kv_len
         final_mask = mask_m[:, None] & mask_n[None, :]
@@ -591,9 +655,9 @@ def _fwd_extend_unified_kernel_int8(
                 other=0,
             ).to(tl.int64)
 
-            k = tl.load(
-                K_Buffer + offs_kv_loc[None, :] * stride_buf_kbs + base_k,
-                mask=mask_n[None, :] & mask_d[:, None],
+            k_t = tl.load(
+                K_Buffer + offs_kv_loc[:, None] * stride_buf_kbs + base_k,
+                mask=mask_n[:, None] & mask_d[None, :],
                 other=0,
             )
             k_scale = tl.load(
@@ -601,7 +665,7 @@ def _fwd_extend_unified_kernel_int8(
                 mask=mask_n,
                 other=0.0,
             )
-            qk = tl.dot(q, _int8_to_f16(k, CONVERT))
+            qk = tl.dot(q, tl.trans(_int8_to_f16(k_t, CONVERT)))
             qk *= (k_scale * sm_scale)[None, :]
             if logit_cap > 0:
                 qk = logit_cap * tanh(qk / logit_cap)
@@ -625,10 +689,13 @@ def _fwd_extend_unified_kernel_int8(
                 mask=mask_n,
                 other=0.0,
             )
-            v_scale_max = tl.maximum(tl.max(v_scale, 0), 1e-30)
-            p_v = (p * (v_scale / v_scale_max)[None, :]).to(tl.float16)
+            # Mask v_scale per row so keys outside final_mask (future tokens or
+            # tokens beyond cur_seq_kv_len) never influence v_scale_max.
+            v_scale_masked = tl.where(final_mask, v_scale[None, :], 0.0)
+            v_scale_max = tl.maximum(tl.max(v_scale_masked, 1), 1e-30)
+            p_v = (p * (v_scale_masked / v_scale_max[:, None])).to(tl.float16)
             pv = tl.dot(p_v, _int8_to_f16(v, CONVERT))
-            acc = acc * re_scale[:, None] + pv * v_scale_max
+            acc = acc * re_scale[:, None] + pv * v_scale_max[:, None]
             e_max = n_e_max
 
     if HAS_SINK:

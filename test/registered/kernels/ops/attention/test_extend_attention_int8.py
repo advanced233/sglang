@@ -357,6 +357,137 @@ def test_unified_extend_prefix_split_invariant():
         )
 
 
+def test_unified_extend_chunked_kv_len_invariant():
+    """2-pass chunked prefill at non-BLOCK_N-aligned splits must match fresh bit-for-bit.
+
+    Specifically catches regressions where future keys beyond ``q_abs`` or
+    ``cur_seq_kv_len`` leak into ``v_scale_max`` on diagonal/tail tiles.
+    """
+    torch.manual_seed(11)
+    seq_len, num_q_heads, num_kv_heads, head_dim = 300, 32, 8, 128
+    q = torch.randn((seq_len, num_q_heads, head_dim), dtype=torch.bfloat16, device=DEVICE)
+    k = 2 * torch.randn((seq_len, num_kv_heads, head_dim), dtype=torch.bfloat16, device=DEVICE)
+    v = 2 * torch.randn((seq_len, num_kv_heads, head_dim), dtype=torch.bfloat16, device=DEVICE)
+    # Inject large per-token V spikes so tile-wide vs per-row-masked v_scale_max
+    # strongly diverge if future tokens leak into earlier rows.
+    v[7::19] *= 50.0
+
+    num_slots = seq_len + 33
+    slots = torch.randperm(num_slots - 1, device=DEVICE)[:seq_len] + 1
+
+    # Fresh full-sequence prefill.
+    k_cache_full, k_scale_full = _int8_cache(
+        num_slots=num_slots, num_kv_heads=num_kv_heads, head_dim=head_dim
+    )
+    v_cache_full, v_scale_full = _int8_cache(
+        num_slots=num_slots, num_kv_heads=num_kv_heads, head_dim=head_dim
+    )
+    store_int8_per_token_head_kv(
+        k=k,
+        v=v,
+        loc=slots,
+        k_cache=k_cache_full,
+        v_cache=v_cache_full,
+        k_scale=k_scale_full,
+        v_scale=v_scale_full,
+    )
+    o_fresh = torch.empty((seq_len, num_q_heads, head_dim), dtype=torch.bfloat16, device=DEVICE)
+    extend_attention_fwd_unified_int8(
+        q=q,
+        o=o_fresh,
+        k_buffer=k_cache_full,
+        v_buffer=v_cache_full,
+        k_scale_buffer=k_scale_full,
+        v_scale_buffer=v_scale_full,
+        qo_indptr=torch.tensor([0, seq_len], dtype=torch.int32, device=DEVICE),
+        kv_indptr=torch.tensor([0, seq_len], dtype=torch.int32, device=DEVICE),
+        kv_indices=slots.to(torch.int64),
+        prefix_lens=torch.tensor([0], dtype=torch.int32, device=DEVICE),
+        max_len_extend=seq_len,
+        sm_scale=head_dim**-0.5,
+        is_causal=True,
+    )
+
+    for split in (5, 17, 63, 137):
+        # Populate unused slots with huge sentinels to verify masked positions
+        # (including slot 0) never affect v_scale_max or outputs.
+        k_cache = torch.full(
+            (num_slots, num_kv_heads, head_dim), 127, dtype=torch.int8, device=DEVICE
+        )
+        v_cache = torch.full_like(k_cache, 127)
+        k_scale = torch.full(
+            (num_slots, num_kv_heads), 1e4, dtype=torch.float32, device=DEVICE
+        )
+        v_scale = torch.full_like(k_scale, 1e4)
+
+        # Pass 1: chunk [0, split) with kv_len == split.
+        store_int8_per_token_head_kv(
+            k=k[:split],
+            v=v[:split],
+            loc=slots[:split],
+            k_cache=k_cache,
+            v_cache=v_cache,
+            k_scale=k_scale,
+            v_scale=v_scale,
+        )
+        o_pass1 = torch.empty(
+            (split, num_q_heads, head_dim), dtype=torch.bfloat16, device=DEVICE
+        )
+        extend_attention_fwd_unified_int8(
+            q=q[:split].contiguous(),
+            o=o_pass1,
+            k_buffer=k_cache,
+            v_buffer=v_cache,
+            k_scale_buffer=k_scale,
+            v_scale_buffer=v_scale,
+            qo_indptr=torch.tensor([0, split], dtype=torch.int32, device=DEVICE),
+            kv_indptr=torch.tensor([0, split], dtype=torch.int32, device=DEVICE),
+            kv_indices=slots[:split].to(torch.int64),
+            prefix_lens=torch.tensor([0], dtype=torch.int32, device=DEVICE),
+            max_len_extend=split,
+            sm_scale=head_dim**-0.5,
+            is_causal=True,
+        )
+        assert torch.equal(o_pass1, o_fresh[:split]), (
+            f"chunk pass 1 (split={split}) diverged from fresh prefill: "
+            f"max diff={(o_pass1.float() - o_fresh[:split].float()).abs().max().item()}"
+        )
+
+        # Pass 2: chunk [split, seq_len) with prefix_len == split, kv_len == seq_len.
+        store_int8_per_token_head_kv(
+            k=k[split:],
+            v=v[split:],
+            loc=slots[split:],
+            k_cache=k_cache,
+            v_cache=v_cache,
+            k_scale=k_scale,
+            v_scale=v_scale,
+        )
+        elen = seq_len - split
+        o_pass2 = torch.empty(
+            (elen, num_q_heads, head_dim), dtype=torch.bfloat16, device=DEVICE
+        )
+        extend_attention_fwd_unified_int8(
+            q=q[split:].contiguous(),
+            o=o_pass2,
+            k_buffer=k_cache,
+            v_buffer=v_cache,
+            k_scale_buffer=k_scale,
+            v_scale_buffer=v_scale,
+            qo_indptr=torch.tensor([0, elen], dtype=torch.int32, device=DEVICE),
+            kv_indptr=torch.tensor([0, seq_len], dtype=torch.int32, device=DEVICE),
+            kv_indices=slots.to(torch.int64),
+            prefix_lens=torch.tensor([split], dtype=torch.int32, device=DEVICE),
+            max_len_extend=elen,
+            sm_scale=head_dim**-0.5,
+            is_causal=True,
+        )
+        assert torch.equal(o_pass2, o_fresh[split:]), (
+            f"chunk pass 2 (split={split}) diverged from fresh prefill: "
+            f"max diff={(o_pass2.float() - o_fresh[split:].float()).abs().max().item()}"
+        )
+
+
 def test_regular_and_unified_match_when_chunk_is_dequantized():
     """Passing dequantized chunk K/V to regular extend must match unified extend."""
     b = _make_batch(

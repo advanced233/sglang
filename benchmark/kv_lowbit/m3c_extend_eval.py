@@ -66,6 +66,20 @@ KERNEL_IMPLS = (
     "int8-fused-unified",
 )
 
+# (block_m, block_n, num_warps, num_stages, convert)
+SWEEP_TILES = (
+    (64, 64, 4, 1, "magic"),
+    (64, 64, 4, 2, "magic"),
+    (64, 128, 4, 1, "magic"),
+    (64, 128, 8, 1, "magic"),
+    (128, 64, 4, 1, "magic"),
+    (128, 64, 8, 1, "magic"),
+    (128, 64, 8, 2, "magic"),
+    (128, 128, 8, 1, "magic"),
+    (64, 64, 4, 1, "cast"),
+    (128, 64, 8, 1, "cast"),
+)
+
 KL_CONFIGS = {
     "int8-chunk-bf16": (
         [
@@ -131,6 +145,16 @@ def _parse_args():
     pk.add_argument("--warmup-ms", type=int, default=100)
     pk.add_argument("--rep-ms", type=int, default=400)
     pk.add_argument("--seed", type=int, default=0)
+    pk.add_argument(
+        "--sweep",
+        action="store_true",
+        help="Also sweep (BLOCK_M, BLOCK_N, warps, stages, convert) tiles for fused INT8 extend.",
+    )
+    pk.add_argument(
+        "--sweep-shapes",
+        default="late-chunk,prefix-hit",
+        help="Comma-separated subset of --shapes to run the tile sweep on.",
+    )
 
     pl = sub.add_parser("kl", help="Offline server-level KL consistency eval")
     pl.add_argument("--model", required=True)
@@ -216,11 +240,22 @@ def _run_kernel_bench(args):
 
     args.out.mkdir(parents=True, exist_ok=True)
     jsonl_path = args.out / "kernel_results.jsonl"
+    sweep_path = args.out / "sweep_results.jsonl"
     shapes = [s.strip() for s in args.shapes.split(",") if s.strip()]
     impls = [x.strip() for x in args.impls.split(",") if x.strip()]
+    sweep_shapes = (
+        {s.strip() for s in args.sweep_shapes.split(",") if s.strip()}
+        if args.sweep
+        else set()
+    )
     for s in shapes:
         if s not in DEFAULT_SHAPES:
             raise SystemExit(f"unknown shape {s!r}; choose from {list(DEFAULT_SHAPES)}")
+    for s in sweep_shapes:
+        if s not in DEFAULT_SHAPES:
+            raise SystemExit(
+                f"unknown sweep shape {s!r}; choose from {list(DEFAULT_SHAPES)}"
+            )
     for impl in impls:
         if impl not in KERNEL_IMPLS:
             raise SystemExit(f"unknown impl {impl!r}; choose from {list(KERNEL_IMPLS)}")
@@ -228,6 +263,9 @@ def _run_kernel_bench(args):
     dev = torch.device("cuda")
     hq, hkv, d = args.num_q_heads, args.num_kv_heads, args.head_dim
     sm_scale = d**-0.5
+
+    if args.sweep:
+        sweep_path.write_text("")
 
     with open(jsonl_path, "w") as out_f:
         for shape_name in shapes:
@@ -543,6 +581,124 @@ def _run_kernel_bench(args):
                 out_f.write(json.dumps(row) + "\n")
                 out_f.flush()
                 print(json.dumps(row), flush=True)
+
+            if args.sweep and shape_name in sweep_shapes:
+                sweep_impls = [
+                    x
+                    for x in impls
+                    if x in ("int8-fused-regular", "int8-fused-unified")
+                ]
+                with open(sweep_path, "a") as sweep_f:
+                    for s_impl in sweep_impls:
+                        ref_exact = (
+                            ref_chunk_bf16
+                            if s_impl == "int8-fused-regular"
+                            else ref_chunk_q
+                        )
+                        for bm, bn, warps, stages, conv in SWEEP_TILES:
+                            out_s = torch.empty_like(q)
+                            row_base = {
+                                "shape": shape_name,
+                                "batch": batch,
+                                "prefix": prefix,
+                                "extend": extend,
+                                "impl": s_impl,
+                                "block_m": bm,
+                                "block_n": bn,
+                                "num_warps": warps,
+                                "num_stages": stages,
+                                "convert": conv,
+                            }
+                            try:
+                                if s_impl == "int8-fused-regular":
+
+                                    def s_op(
+                                        bm=bm,
+                                        bn=bn,
+                                        warps=warps,
+                                        stages=stages,
+                                        conv=conv,
+                                        out_s=out_s,
+                                    ):
+                                        extend_attention_fwd_int8(
+                                            q_extend=q,
+                                            k_extend=k_extend,
+                                            v_extend=v_extend,
+                                            o_extend=out_s,
+                                            k_buffer=k_buf_i8,
+                                            v_buffer=v_buf_i8,
+                                            k_scale_buffer=k_scale,
+                                            v_scale_buffer=v_scale,
+                                            qo_indptr=qo_indptr,
+                                            kv_indptr=prefix_kv_indptr,
+                                            kv_indices=prefix_kv_indices,
+                                            custom_mask=None,
+                                            is_causal=True,
+                                            mask_indptr=None,
+                                            max_len_extend=extend,
+                                            sm_scale=sm_scale,
+                                            block_m=bm,
+                                            block_n=bn,
+                                            num_warps=warps,
+                                            num_stages=stages,
+                                            convert=conv,
+                                        )
+
+                                else:
+
+                                    def s_op(
+                                        bm=bm,
+                                        bn=bn,
+                                        warps=warps,
+                                        stages=stages,
+                                        conv=conv,
+                                        out_s=out_s,
+                                    ):
+                                        extend_attention_fwd_unified_int8(
+                                            q=q,
+                                            o=out_s,
+                                            k_buffer=k_buf_i8,
+                                            v_buffer=v_buf_i8,
+                                            k_scale_buffer=k_scale,
+                                            v_scale_buffer=v_scale,
+                                            qo_indptr=qo_indptr,
+                                            kv_indptr=unified_kv_indptr,
+                                            kv_indices=unified_kv_indices,
+                                            prefix_lens=prefix_lens,
+                                            max_len_extend=extend,
+                                            sm_scale=sm_scale,
+                                            is_causal=True,
+                                            block_m=bm,
+                                            block_n=bn,
+                                            num_warps=warps,
+                                            num_stages=stages,
+                                            convert=conv,
+                                        )
+
+                                s_op()
+                                torch.cuda.synchronize()
+                                _, max_exact = _cosine_and_max_err(out_s, ref_exact)
+                                p20, med, p80 = triton.testing.do_bench(
+                                    s_op,
+                                    warmup=min(args.warmup_ms, 50),
+                                    rep=min(args.rep_ms, 200),
+                                    quantiles=[0.2, 0.5, 0.8],
+                                )
+                                s_row = {
+                                    **row_base,
+                                    "median_ms": round(med, 4),
+                                    "p20_ms": round(p20, 4),
+                                    "p80_ms": round(p80, 4),
+                                    "max_abs_vs_exact": round(max_exact, 5),
+                                }
+                            except Exception as exc:
+                                s_row = {
+                                    **row_base,
+                                    "error": str(exc).splitlines()[0][:200],
+                                }
+                            sweep_f.write(json.dumps(s_row) + "\n")
+                            sweep_f.flush()
+                            print(json.dumps(s_row), flush=True)
 
             del (
                 q,
@@ -976,6 +1132,8 @@ def _fmt_sci(val):
 def _write_report(out_dir: Path):
     lines = ["# M3c Extend Kernel & KL Consistency Summary\n"]
 
+    ref_bf16_by_shape = {}
+    ref_m3b_by_shape = {}
     k_path = out_dir / "kernel_results.jsonl"
     if k_path.exists():
         rows = [json.loads(x) for x in k_path.read_text().splitlines() if x.strip()]
@@ -996,6 +1154,8 @@ def _write_report(out_dir: Path):
             ref_m3b_ms = next(
                 (r["median_ms"] for r in srows if r["impl"] == "int8-m3b-gather"), None
             )
+            ref_bf16_by_shape[shape] = ref_bf16_ms
+            ref_m3b_by_shape[shape] = ref_m3b_ms
             for r in srows:
                 sp_bf16 = (
                     f"{ref_bf16_ms / r['median_ms']:.2f}×"
@@ -1014,6 +1174,56 @@ def _write_report(out_dir: Path):
                     f"{r['cos_vs_bf16']:.6f} | {r['max_abs_vs_exact']:.5f} |"
                 )
         lines.append("")
+
+    sweep_path = out_dir / "sweep_results.jsonl"
+    if sweep_path.exists():
+        s_rows = [
+            json.loads(x) for x in sweep_path.read_text().splitlines() if x.strip()
+        ]
+        if s_rows:
+            groups = {}
+            for r in s_rows:
+                groups.setdefault((r["shape"], r["impl"]), []).append(r)
+
+            lines.append("## Extend Tile Sweep\n")
+            lines.append(
+                "| Shape | Impl | Tile (M×N, w, s, conv) | Median ms | "
+                "vs BF16 | vs M3b | Max abs vs exact |"
+            )
+            lines.append("|---|---|---|---:|---:|---:|---:|")
+            for (shape, impl), grows in groups.items():
+                ref_bf16_ms = ref_bf16_by_shape.get(shape)
+                ref_m3b_ms = ref_m3b_by_shape.get(shape)
+                grows_sorted = sorted(
+                    grows, key=lambda r: r.get("median_ms", float("inf"))
+                )
+                for r in grows_sorted:
+                    tile_lbl = (
+                        f"`{r['block_m']}×{r['block_n']}, "
+                        f"w={r['num_warps']}, s={r['num_stages']}, {r['convert']}`"
+                    )
+                    if "error" in r:
+                        lines.append(
+                            f"| {shape} | `{impl}` | {tile_lbl} | "
+                            f"ERR: {r['error'][:60]} | - | - | - |"
+                        )
+                    else:
+                        sp_bf16 = (
+                            f"{ref_bf16_ms / r['median_ms']:.2f}×"
+                            if ref_bf16_ms and r["median_ms"] > 0
+                            else "-"
+                        )
+                        sp_m3b = (
+                            f"{ref_m3b_ms / r['median_ms']:.2f}×"
+                            if ref_m3b_ms and r["median_ms"] > 0
+                            else "-"
+                        )
+                        lines.append(
+                            f"| {shape} | `{impl}` | {tile_lbl} | "
+                            f"{r['median_ms']:.3f} | {sp_bf16} | {sp_m3b} | "
+                            f"{r['max_abs_vs_exact']:.5f} |"
+                        )
+            lines.append("")
 
     kl_path = out_dir / "kl_results.jsonl"
     if kl_path.exists():
