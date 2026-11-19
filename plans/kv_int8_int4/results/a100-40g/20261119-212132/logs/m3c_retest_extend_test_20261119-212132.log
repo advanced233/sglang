@@ -1,0 +1,252 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- $KVQ_WORK/envs/sglang/bin/python
+cachedir: .pytest_cache
+rootdir: $KVQ_WORK/src/sglang/test
+configfile: pytest.ini
+plugins: anyio-4.15.1, cov-7.1.0
+collecting ... collected 35 items
+
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4-causal-magic] PASSED [  2%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4-causal-cast] PASSED [  5%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4-noncausal-magic] PASSED [  8%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4-noncausal-cast] PASSED [ 11%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa8_d64-causal-magic] PASSED [ 14%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa8_d64-causal-cast] PASSED [ 17%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa8_d64-noncausal-magic] PASSED [ 20%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa8_d64-noncausal-cast] PASSED [ 22%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[mha_logit_cap-causal-magic] PASSED [ 25%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[mha_logit_cap-causal-cast] PASSED [ 28%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[mha_logit_cap-noncausal-magic] PASSED [ 31%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[mha_logit_cap-noncausal-cast] PASSED [ 34%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4_d80-causal-magic] PASSED [ 37%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4_d80-causal-cast] PASSED [ 40%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4_d80-noncausal-magic] PASSED [ 42%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4_d80-noncausal-cast] PASSED [ 45%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4-causal-magic] PASSED [ 48%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4-causal-cast] PASSED [ 51%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4-noncausal-magic] PASSED [ 54%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4-noncausal-cast] PASSED [ 57%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa8_d64-causal-magic] PASSED [ 60%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa8_d64-causal-cast] PASSED [ 62%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa8_d64-noncausal-magic] PASSED [ 65%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa8_d64-noncausal-cast] PASSED [ 68%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[mha_logit_cap-causal-magic] PASSED [ 71%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[mha_logit_cap-causal-cast] PASSED [ 74%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[mha_logit_cap-noncausal-magic] PASSED [ 77%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[mha_logit_cap-noncausal-cast] PASSED [ 80%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4_d80-causal-magic] PASSED [ 82%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4_d80-causal-cast] PASSED [ 85%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4_d80-noncausal-magic] PASSED [ 88%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4_d80-noncausal-cast] PASSED [ 91%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_prefix_split_invariant FAILED [ 94%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_chunked_kv_len_invariant FAILED [ 97%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_and_unified_match_when_chunk_is_dequantized PASSED [100%]
+
+=================================== FAILURES ===================================
+__________________ test_unified_extend_prefix_split_invariant __________________
+
+    def test_unified_extend_prefix_split_invariant():
+        """Chunked prefill / prefix-cache hit must match fresh prefill bit-for-bit."""
+        torch.manual_seed(7)
+        seq_len, num_q_heads, num_kv_heads, head_dim = 300, 32, 8, 128
+        q = torch.randn((seq_len, num_q_heads, head_dim), dtype=torch.bfloat16, device=DEVICE)
+        k = 2 * torch.randn((seq_len, num_kv_heads, head_dim), dtype=torch.bfloat16, device=DEVICE)
+        v = 2 * torch.randn((seq_len, num_kv_heads, head_dim), dtype=torch.bfloat16, device=DEVICE)
+        slots = torch.randperm(seq_len + 32, device=DEVICE)[:seq_len] + 1
+        k_cache, k_scale = _int8_cache(
+            num_slots=seq_len + 33, num_kv_heads=num_kv_heads, head_dim=head_dim
+        )
+        v_cache, v_scale = _int8_cache(
+            num_slots=seq_len + 33, num_kv_heads=num_kv_heads, head_dim=head_dim
+        )
+        store_int8_per_token_head_kv(
+            k=k,
+            v=v,
+            loc=slots,
+            k_cache=k_cache,
+            v_cache=v_cache,
+            k_scale=k_scale,
+            v_scale=v_scale,
+        )
+    
+        def run(prefix_len):
+            elen = seq_len - prefix_len
+            o = torch.empty((elen, num_q_heads, head_dim), dtype=torch.bfloat16, device=DEVICE)
+            extend_attention_fwd_unified_int8(
+                q=q[prefix_len:].contiguous(),
+                o=o,
+                k_buffer=k_cache,
+                v_buffer=v_cache,
+                k_scale_buffer=k_scale,
+                v_scale_buffer=v_scale,
+                qo_indptr=torch.tensor([0, elen], dtype=torch.int32, device=DEVICE),
+                kv_indptr=torch.tensor([0, seq_len], dtype=torch.int32, device=DEVICE),
+                kv_indices=slots.to(torch.int64),
+                prefix_lens=torch.tensor([prefix_len], dtype=torch.int32, device=DEVICE),
+                max_len_extend=elen,
+                sm_scale=head_dim**-0.5,
+                is_causal=True,
+            )
+            return o
+    
+        o_fresh = run(0)
+        for split in (1, 63, 64, 137, 255):
+            o_hit = run(split)
+>           assert torch.equal(o_hit, o_fresh[split:]), (
+                f"prefix split {split} diverged from fresh prefill: "
+                f"max diff={(o_hit.float() - o_fresh[split:].float()).abs().max().item()}"
+            )
+E           AssertionError: prefix split 63 diverged from fresh prefill: max diff=0.00390625
+E           assert False
+E            +  where False = <built-in method equal of type object at 0x7fc6bd4c4640>(tensor([[[ 1.0254e-01,  2.9492e-01, -8.5449e-03,  ...,  3.6328e-01,\n           4.2188e-01, -3.6914e-01],\n         [ 1.4062e-01,  3.9648e-01, -2.5195e-01,  ..., -2.2266e-01,\n           1.1641e+00, -4.6680e-01],\n         [-2.2095e-02,  9.9219e-01,  8.7109e-01,  ..., -6.9922e-01,\n           7.1716e-03, -1.4648e-01],\n         ...,\n         [ 9.8047e-01,  6.0156e-01, -1.8262e-01,  ..., -2.4219e-01,\n           1.9043e-01,  8.1641e-01],\n         [-1.1670e-01, -3.8452e-03,  1.1172e+00,  ..., -9.2285e-02,\n           1.8945e-01, -1.6895e-01],\n         [ 2.3438e-01,  6.7383e-02,  7.5000e-01,  ...,  3.4375e-01,\n           1.3184e-01, -4.2969e-02]],\n\n        [[ 8.9062e-01, -1.0986e-01,  5.4688e-01,  ...,  1.0078e+00,\n          -5.0781e-01,  7.5391e-01],\n         [ 5.2734e-01,  2.6562e+00, -9.0625e-01,  ..., -3.5352e-01,\n           4.4141e-01,  1.5078e+00],\n         [ 2.0703e-01,  5.1562e-01, -6.6895e-02,  ..., -5.4626e-03,\n           4.4141e-01,  1.1328e-01],\n         ...,\n         [ 3.8086e-01,  9.4531e-01, -2.9297e-01,  ..., -9.0625e-01,\n           3.6719e-01,  4.6484e-01],\n         [ 8.8867e-02, -1.1719e-01, -9.2969e-01,  ..., -4.9023e-01,\n           1.8164e-01,  7.7734e-01],\n         [ 2....2422e-01,  1.4062e-01,  ...,  3.1641e-01,\n          -2.5586e-01,  4.7070e-01],\n         [ 3.8477e-01, -6.7871e-02, -4.7070e-01,  ..., -1.5430e-01,\n           2.5586e-01,  3.2715e-02],\n         ...,\n         [-1.0938e-01,  4.3945e-03,  5.3906e-01,  ..., -7.4609e-01,\n           7.7734e-01, -7.5000e-01],\n         [-7.8516e-01,  8.7891e-01, -3.9648e-01,  ...,  3.1445e-01,\n          -9.5312e-01, -1.3750e+00],\n         [ 2.4707e-01,  8.1543e-02, -1.0303e-01,  ...,  2.4170e-02,\n           3.1250e-01,  5.7373e-02]],\n\n        [[ 2.3047e-01, -6.5234e-01,  5.9766e-01,  ..., -5.0391e-01,\n           4.1797e-01, -3.7891e-01],\n         [ 4.5508e-01,  6.7383e-02,  2.3633e-01,  ...,  2.9102e-01,\n           5.7031e-01, -6.7969e-01],\n         [ 9.5703e-01, -3.8574e-02,  7.1875e-01,  ..., -2.2461e-01,\n           9.3262e-02, -1.6895e-01],\n         ...,\n         [ 6.6406e-01, -2.7148e-01, -1.2793e-01,  ...,  2.5195e-01,\n           3.3594e-01, -4.9805e-01],\n         [-3.9648e-01, -2.4121e-01, -3.1445e-01,  ...,  8.9453e-01,\n          -8.2031e-02, -4.9609e-01],\n         [ 4.4727e-01, -2.7710e-02, -8.5938e-02,  ..., -1.9434e-01,\n           2.5781e-01,  4.3213e-02]]], device='cuda:0', dtype=torch.bfloat16), tensor([[[ 1.0254e-01,  2.9492e-01, -8.5449e-03,  ...,  3.6328e-01,\n           4.2188e-01, -3.6914e-01],\n         [ 1.4062e-01,  3.9648e-01, -2.5195e-01,  ..., -2.2266e-01,\n           1.1641e+00, -4.6680e-01],\n         [-2.2095e-02,  9.9219e-01,  8.7109e-01,  ..., -6.9922e-01,\n           7.1716e-03, -1.4648e-01],\n         ...,\n         [ 9.8047e-01,  6.0156e-01, -1.8262e-01,  ..., -2.4219e-01,\n           1.9043e-01,  8.1641e-01],\n         [-1.1670e-01, -3.8452e-03,  1.1172e+00,  ..., -9.2285e-02,\n           1.8945e-01, -1.6895e-01],\n         [ 2.3438e-01,  6.7383e-02,  7.5000e-01,  ...,  3.4375e-01,\n           1.3184e-01, -4.2969e-02]],\n\n        [[ 8.9062e-01, -1.0986e-01,  5.4688e-01,  ...,  1.0078e+00,\n          -5.0781e-01,  7.5391e-01],\n         [ 5.2734e-01,  2.6562e+00, -9.0625e-01,  ..., -3.5352e-01,\n           4.4141e-01,  1.5078e+00],\n         [ 2.0703e-01,  5.1562e-01, -6.6895e-02,  ..., -5.4626e-03,\n           4.4141e-01,  1.1328e-01],\n         ...,\n         [ 3.8086e-01,  9.4531e-01, -2.9297e-01,  ..., -9.0625e-01,\n           3.6719e-01,  4.6484e-01],\n         [ 8.8867e-02, -1.1719e-01, -9.2969e-01,  ..., -4.9023e-01,\n           1.8164e-01,  7.7734e-01],\n         [ 2....2422e-01,  1.4062e-01,  ...,  3.1641e-01,\n          -2.5586e-01,  4.7070e-01],\n         [ 3.8477e-01, -6.7871e-02, -4.7070e-01,  ..., -1.5430e-01,\n           2.5586e-01,  3.2715e-02],\n         ...,\n         [-1.0938e-01,  4.3945e-03,  5.3906e-01,  ..., -7.4609e-01,\n           7.7734e-01, -7.5000e-01],\n         [-7.8516e-01,  8.7891e-01, -3.9648e-01,  ...,  3.1445e-01,\n          -9.5312e-01, -1.3750e+00],\n         [ 2.4707e-01,  8.1543e-02, -1.0303e-01,  ...,  2.4170e-02,\n           3.1250e-01,  5.7373e-02]],\n\n        [[ 2.3047e-01, -6.5234e-01,  5.9766e-01,  ..., -5.0391e-01,\n           4.1797e-01, -3.7891e-01],\n         [ 4.5508e-01,  6.7383e-02,  2.3633e-01,  ...,  2.9102e-01,\n           5.7031e-01, -6.7969e-01],\n         [ 9.5703e-01, -3.8574e-02,  7.1875e-01,  ..., -2.2461e-01,\n           9.3262e-02, -1.6895e-01],\n         ...,\n         [ 6.6406e-01, -2.7148e-01, -1.2793e-01,  ...,  2.5195e-01,\n           3.3594e-01, -4.9805e-01],\n         [-3.9648e-01, -2.4121e-01, -3.1445e-01,  ...,  8.9453e-01,\n          -8.2031e-02, -4.9609e-01],\n         [ 4.4727e-01, -2.7710e-02, -8.5938e-02,  ..., -1.9434e-01,\n           2.5781e-01,  4.3213e-02]]], device='cuda:0', dtype=torch.bfloat16))
+E            +    where <built-in method equal of type object at 0x7fc6bd4c4640> = torch.equal
+
+test/registered/kernels/ops/attention/test_extend_attention_int8.py:354: AssertionError
+_________________ test_unified_extend_chunked_kv_len_invariant _________________
+
+    def test_unified_extend_chunked_kv_len_invariant():
+        """2-pass chunked prefill at non-BLOCK_N-aligned splits must match fresh bit-for-bit.
+    
+        Specifically catches regressions where future keys beyond ``q_abs`` or
+        ``cur_seq_kv_len`` leak into ``v_scale_max`` on diagonal/tail tiles.
+        """
+        torch.manual_seed(11)
+        seq_len, num_q_heads, num_kv_heads, head_dim = 300, 32, 8, 128
+        q = torch.randn((seq_len, num_q_heads, head_dim), dtype=torch.bfloat16, device=DEVICE)
+        k = 2 * torch.randn((seq_len, num_kv_heads, head_dim), dtype=torch.bfloat16, device=DEVICE)
+        v = 2 * torch.randn((seq_len, num_kv_heads, head_dim), dtype=torch.bfloat16, device=DEVICE)
+        # Inject large per-token V spikes so tile-wide vs per-row-masked v_scale_max
+        # strongly diverge if future tokens leak into earlier rows.
+        v[7::19] *= 50.0
+    
+        num_slots = seq_len + 33
+        slots = torch.randperm(num_slots - 1, device=DEVICE)[:seq_len] + 1
+    
+        # Fresh full-sequence prefill.
+        k_cache_full, k_scale_full = _int8_cache(
+            num_slots=num_slots, num_kv_heads=num_kv_heads, head_dim=head_dim
+        )
+        v_cache_full, v_scale_full = _int8_cache(
+            num_slots=num_slots, num_kv_heads=num_kv_heads, head_dim=head_dim
+        )
+        store_int8_per_token_head_kv(
+            k=k,
+            v=v,
+            loc=slots,
+            k_cache=k_cache_full,
+            v_cache=v_cache_full,
+            k_scale=k_scale_full,
+            v_scale=v_scale_full,
+        )
+        o_fresh = torch.empty((seq_len, num_q_heads, head_dim), dtype=torch.bfloat16, device=DEVICE)
+        extend_attention_fwd_unified_int8(
+            q=q,
+            o=o_fresh,
+            k_buffer=k_cache_full,
+            v_buffer=v_cache_full,
+            k_scale_buffer=k_scale_full,
+            v_scale_buffer=v_scale_full,
+            qo_indptr=torch.tensor([0, seq_len], dtype=torch.int32, device=DEVICE),
+            kv_indptr=torch.tensor([0, seq_len], dtype=torch.int32, device=DEVICE),
+            kv_indices=slots.to(torch.int64),
+            prefix_lens=torch.tensor([0], dtype=torch.int32, device=DEVICE),
+            max_len_extend=seq_len,
+            sm_scale=head_dim**-0.5,
+            is_causal=True,
+        )
+    
+        for split in (5, 17, 63, 137):
+            # Populate unused slots with huge sentinels to verify masked positions
+            # (including slot 0) never affect v_scale_max or outputs.
+            k_cache = torch.full(
+                (num_slots, num_kv_heads, head_dim), 127, dtype=torch.int8, device=DEVICE
+            )
+            v_cache = torch.full_like(k_cache, 127)
+            k_scale = torch.full(
+                (num_slots, num_kv_heads), 1e4, dtype=torch.float32, device=DEVICE
+            )
+            v_scale = torch.full_like(k_scale, 1e4)
+    
+            # Pass 1: chunk [0, split) with kv_len == split.
+            store_int8_per_token_head_kv(
+                k=k[:split],
+                v=v[:split],
+                loc=slots[:split],
+                k_cache=k_cache,
+                v_cache=v_cache,
+                k_scale=k_scale,
+                v_scale=v_scale,
+            )
+            o_pass1 = torch.empty(
+                (split, num_q_heads, head_dim), dtype=torch.bfloat16, device=DEVICE
+            )
+            extend_attention_fwd_unified_int8(
+                q=q[:split].contiguous(),
+                o=o_pass1,
+                k_buffer=k_cache,
+                v_buffer=v_cache,
+                k_scale_buffer=k_scale,
+                v_scale_buffer=v_scale,
+                qo_indptr=torch.tensor([0, split], dtype=torch.int32, device=DEVICE),
+                kv_indptr=torch.tensor([0, split], dtype=torch.int32, device=DEVICE),
+                kv_indices=slots[:split].to(torch.int64),
+                prefix_lens=torch.tensor([0], dtype=torch.int32, device=DEVICE),
+                max_len_extend=split,
+                sm_scale=head_dim**-0.5,
+                is_causal=True,
+            )
+            assert torch.equal(o_pass1, o_fresh[:split]), (
+                f"chunk pass 1 (split={split}) diverged from fresh prefill: "
+                f"max diff={(o_pass1.float() - o_fresh[:split].float()).abs().max().item()}"
+            )
+    
+            # Pass 2: chunk [split, seq_len) with prefix_len == split, kv_len == seq_len.
+            store_int8_per_token_head_kv(
+                k=k[split:],
+                v=v[split:],
+                loc=slots[split:],
+                k_cache=k_cache,
+                v_cache=v_cache,
+                k_scale=k_scale,
+                v_scale=v_scale,
+            )
+            elen = seq_len - split
+            o_pass2 = torch.empty(
+                (elen, num_q_heads, head_dim), dtype=torch.bfloat16, device=DEVICE
+            )
+            extend_attention_fwd_unified_int8(
+                q=q[split:].contiguous(),
+                o=o_pass2,
+                k_buffer=k_cache,
+                v_buffer=v_cache,
+                k_scale_buffer=k_scale,
+                v_scale_buffer=v_scale,
+                qo_indptr=torch.tensor([0, elen], dtype=torch.int32, device=DEVICE),
+                kv_indptr=torch.tensor([0, seq_len], dtype=torch.int32, device=DEVICE),
+                kv_indices=slots.to(torch.int64),
+                prefix_lens=torch.tensor([split], dtype=torch.int32, device=DEVICE),
+                max_len_extend=elen,
+                sm_scale=head_dim**-0.5,
+                is_causal=True,
+            )
+>           assert torch.equal(o_pass2, o_fresh[split:]), (
+                f"chunk pass 2 (split={split}) diverged from fresh prefill: "
+                f"max diff={(o_pass2.float() - o_fresh[split:].float()).abs().max().item()}"
+            )
+E           AssertionError: chunk pass 2 (split=17) diverged from fresh prefill: max diff=0.0078125
+E           assert False
+E            +  where False = <built-in method equal of type object at 0x7fc6bd4c4640>(tensor([[[ 1.0703e+00,  1.1562e+00,  6.7969e-01,  ..., -2.0630e-02,\n          -5.7812e-01,  2.7539e-01],\n         [-2.0117e-01,  1.3359e+00, -7.4609e-01,  ..., -2.3438e+00,\n          -1.0469e+00,  1.0596e-01],\n         [ 1.7578e-01,  1.6875e+00, -1.3672e+00,  ..., -5.7812e-01,\n          -4.5625e+00,  2.1094e+00],\n         ...,\n         [-1.4141e+00, -6.8359e-01, -3.5742e-01,  ..., -9.8047e-01,\n          -3.0625e+00, -4.5312e-01],\n         [ 4.3750e-01,  1.3281e-01,  1.8066e-01,  ..., -6.6406e-01,\n          -1.8750e+00,  1.1562e+00],\n         [ 1.3203e+00,  1.4099e-02, -3.3398e-01,  ...,  4.3945e-01,\n          -1.0156e+00, -9.8047e-01]],\n\n        [[-1.3516e+00,  9.6094e-01, -7.0703e-01,  ..., -7.0801e-02,\n           3.1836e-01,  1.0391e+00],\n         [-6.1328e-01,  9.1406e-01, -1.0078e+00,  ...,  5.0781e-01,\n          -2.5586e-01,  8.7500e-01],\n         [ 1.3770e-01, -2.6562e+00,  8.8867e-02,  ...,  4.7656e-01,\n           1.1719e+00, -2.2188e+00],\n         ...,\n         [-1.7500e+00,  1.0312e+00,  8.6914e-02,  ...,  1.1250e+00,\n           9.5703e-01,  1.6992e-01],\n         [-1.1625e+01, -6.8750e+00, -2.5000e+00,  ..., -9.9375e+00,\n           1.4297e+00, -6.3750e+00],\n         [-1....2656e-01, -2.6562e-01,  ...,  1.7188e+00,\n           4.5703e-01, -6.7188e-01],\n         [ 1.8047e+00, -1.2109e+00,  1.0791e-01,  ...,  2.3125e+00,\n           1.0234e+00, -1.1250e+00],\n         ...,\n         [ 3.5156e-01,  8.0469e-01, -1.1250e+00,  ..., -1.8262e-01,\n           3.8672e-01,  1.5625e-01],\n         [ 4.5898e-01,  1.0312e+00, -5.7422e-01,  ..., -9.7656e-01,\n          -6.7578e-01, -8.0859e-01],\n         [-2.1191e-01, -1.1328e+00,  9.3359e-01,  ..., -2.6953e-01,\n          -7.3828e-01,  1.4844e-01]],\n\n        [[ 3.7842e-02,  5.2734e-01,  8.9062e-01,  ..., -8.5547e-01,\n           2.1582e-01, -6.7188e-01],\n         [ 3.4844e+00, -3.1562e+00, -8.4473e-02,  ...,  1.9219e+00,\n          -2.5312e+00, -7.6562e-01],\n         [-1.8457e-01,  2.4121e-01,  6.2500e-01,  ...,  1.9824e-01,\n           1.3672e-01,  8.4375e-01],\n         ...,\n         [-3.5889e-02, -2.7344e-01,  7.0703e-01,  ...,  6.7188e-01,\n          -1.1377e-01, -1.3750e+00],\n         [ 3.9844e-01,  5.3125e-01, -4.9316e-02,  ..., -4.1211e-01,\n           6.0156e-01, -5.3516e-01],\n         [ 9.0625e-01, -1.8359e-01, -4.3164e-01,  ..., -1.2969e+00,\n           1.4258e-01, -5.6641e-01]]], device='cuda:0', dtype=torch.bfloat16), tensor([[[ 1.0703e+00,  1.1562e+00,  6.7969e-01,  ..., -2.0630e-02,\n          -5.7812e-01,  2.7539e-01],\n         [-2.0117e-01,  1.3359e+00, -7.4609e-01,  ..., -2.3438e+00,\n          -1.0469e+00,  1.0596e-01],\n         [ 1.7578e-01,  1.6875e+00, -1.3672e+00,  ..., -5.7812e-01,\n          -4.5625e+00,  2.1094e+00],\n         ...,\n         [-1.4141e+00, -6.8359e-01, -3.5742e-01,  ..., -9.8047e-01,\n          -3.0625e+00, -4.5312e-01],\n         [ 4.3750e-01,  1.3281e-01,  1.8066e-01,  ..., -6.6406e-01,\n          -1.8750e+00,  1.1562e+00],\n         [ 1.3203e+00,  1.4099e-02, -3.3398e-01,  ...,  4.3945e-01,\n          -1.0156e+00, -9.8047e-01]],\n\n        [[-1.3516e+00,  9.6094e-01, -7.0703e-01,  ..., -7.0801e-02,\n           3.1836e-01,  1.0391e+00],\n         [-6.1328e-01,  9.1406e-01, -1.0078e+00,  ...,  5.0781e-01,\n          -2.5586e-01,  8.7500e-01],\n         [ 1.3770e-01, -2.6562e+00,  8.8867e-02,  ...,  4.7656e-01,\n           1.1719e+00, -2.2188e+00],\n         ...,\n         [-1.7500e+00,  1.0312e+00,  8.6914e-02,  ...,  1.1250e+00,\n           9.5703e-01,  1.6992e-01],\n         [-1.1625e+01, -6.8750e+00, -2.5000e+00,  ..., -9.9375e+00,\n           1.4297e+00, -6.3750e+00],\n         [-1....2656e-01, -2.6562e-01,  ...,  1.7188e+00,\n           4.5703e-01, -6.7188e-01],\n         [ 1.8047e+00, -1.2109e+00,  1.0791e-01,  ...,  2.3125e+00,\n           1.0234e+00, -1.1250e+00],\n         ...,\n         [ 3.5156e-01,  8.0469e-01, -1.1250e+00,  ..., -1.8262e-01,\n           3.8672e-01,  1.5625e-01],\n         [ 4.5898e-01,  1.0312e+00, -5.7422e-01,  ..., -9.7656e-01,\n          -6.7578e-01, -8.0859e-01],\n         [-2.1191e-01, -1.1328e+00,  9.3359e-01,  ..., -2.6953e-01,\n          -7.3828e-01,  1.4844e-01]],\n\n        [[ 3.7842e-02,  5.2734e-01,  8.9062e-01,  ..., -8.5547e-01,\n           2.1582e-01, -6.7188e-01],\n         [ 3.4844e+00, -3.1562e+00, -8.4473e-02,  ...,  1.9219e+00,\n          -2.5312e+00, -7.6562e-01],\n         [-1.8457e-01,  2.4121e-01,  6.2500e-01,  ...,  1.9824e-01,\n           1.3672e-01,  8.4375e-01],\n         ...,\n         [-3.5889e-02, -2.7344e-01,  7.0703e-01,  ...,  6.7188e-01,\n          -1.1377e-01, -1.3750e+00],\n         [ 3.9844e-01,  5.3125e-01, -4.9316e-02,  ..., -4.1211e-01,\n           6.0156e-01, -5.3516e-01],\n         [ 9.0625e-01, -1.8359e-01, -4.3164e-01,  ..., -1.2969e+00,\n           1.4258e-01, -5.6641e-01]]], device='cuda:0', dtype=torch.bfloat16))
+E            +    where <built-in method equal of type object at 0x7fc6bd4c4640> = torch.equal
+
+test/registered/kernels/ops/attention/test_extend_attention_int8.py:485: AssertionError
+=============================== warnings summary ===============================
+../../envs/sglang/lib/python3.12/site-packages/_pytest/config/__init__.py:1636
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/_pytest/config/__init__.py:1636: PytestConfigWarning: Unknown config option: asyncio_mode
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_prefix_split_invariant
+FAILED test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_chunked_kv_len_invariant
+============== 2 failed, 33 passed, 1 warning in 70.31s (0:01:10) ==============
