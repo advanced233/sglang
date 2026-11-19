@@ -509,13 +509,14 @@ def _fwd_extend_unified_kernel_int8(
     the reduction order for any query position is independent of how the prompt
     was split between prefix cache and current extend chunk.
 
-    For standard causal attention, strictly-valid prefix tiles run in a
-    mask-free fast loop (Phase 1) and only the diagonal/tail tiles run with
-    per-row causal masking and per-row masked ``v_scale_max`` (Phase 2). That
-    both eliminates 2D mask register pressure on >90% of tiles and guarantees
-    future keys beyond ``q_abs`` or ``cur_seq_kv_len`` never leak into
-    ``v_scale_max``, preserving bit-exactness across arbitrary chunked-prefill
-    splits.
+    For standard causal attention, all KV tiles run through a single loop so
+    every floating-point operation (dot, exp, sum, div, fma) uses the exact
+    same PTX instructions and Triton tensor layouts regardless of whether a
+    tile is full or diagonal. Strictly-full prefix tiles skip 2D causal
+    masking and compute ``v_scale_max`` via a 1D tile max, while diagonal/tail
+    tiles mask ``v_scale`` per row so future keys beyond ``q_abs`` or
+    ``cur_seq_kv_len`` never leak into ``v_scale_max``, preserving bit-exact
+    invariance across arbitrary chunked-prefill / prefix-cache splits.
     """
     cur_seq = tl.program_id(0)
     cur_head = tl.program_id(1)
@@ -578,99 +579,16 @@ def _fwd_extend_unified_kernel_int8(
             )
             start_k = (start_k // BLOCK_N) * BLOCK_N
 
-    # Phase 1: strictly full causal tiles (all BLOCK_N keys < first_query_abs
-    # and < cur_seq_kv_len). Every query row sees all BLOCK_N keys, so 1D
-    # v_scale_max matches per-row masked v_scale_max bit-for-bit.
-    full_end_k = start_k
     if IS_CAUSAL and not USE_CUSTOM_MASK and SLIDING_WINDOW_SIZE <= 0:
         first_query_abs = cur_seq_prefix_len + cur_block_m * BLOCK_M
-        full_limit = tl.minimum(first_query_abs, cur_seq_kv_len)
-        full_end_k = tl.maximum((full_limit // BLOCK_N) * BLOCK_N, start_k)
+        full_limit = tl.minimum(first_query_abs + 1, cur_seq_kv_len)
+        q_abs = first_query_abs + offs_m[:, None]
 
-        for start_n in range(start_k, full_end_k, BLOCK_N):
+        for start_n in range(start_k, end_k, BLOCK_N):
             start_n = tl.multiple_of(start_n, BLOCK_N)
-            offs_kv_loc = tl.load(
-                kv_indices + cur_seq_kv_start_idx + start_n + offs_n
-            ).to(tl.int64)
+            mask_n = (start_n + offs_n) < cur_seq_kv_len
+            is_full_tile = (start_n + BLOCK_N) <= full_limit
 
-            k_t = tl.load(
-                K_Buffer + offs_kv_loc[:, None] * stride_buf_kbs + base_k,
-                mask=mask_d[None, :],
-                other=0,
-            )
-            k_scale = tl.load(
-                K_Scale + offs_kv_loc * stride_ks_bs + cur_kv_head,
-            )
-            qk = tl.dot(q, tl.trans(_int8_to_f16(k_t, CONVERT)))
-            qk *= (k_scale * sm_scale)[None, :]
-            if logit_cap > 0:
-                qk = logit_cap * tanh(qk / logit_cap)
-
-            row_max = tl.max(qk, 1)
-            n_e_max = tl.maximum(row_max, e_max)
-            re_scale = tl.exp(e_max - n_e_max)
-            p = tl.exp(qk - n_e_max[:, None])
-            deno = tl.fma(deno, re_scale, tl.sum(p, 1))
-
-            v = tl.load(
-                V_Buffer + offs_kv_loc[:, None] * stride_buf_vbs + base_v,
-                mask=mask_dv[None, :],
-                other=0,
-            )
-            v_scale = tl.load(
-                V_Scale + offs_kv_loc * stride_vs_bs + cur_kv_head,
-            )
-            # Use IEEE-754 div_rn and explicit fma in both Phase 1 and Phase 2
-            # so a full tile produces bit-identical results regardless of which
-            # phase executes it (Triton's `/` otherwise lowers 1D/scalar and
-            # 2D/1D divisions with different reciprocal rounding).
-            v_scale_max = tl.maximum(tl.max(v_scale, 0), 1e-30)
-            v_scale_norm = tl.div_rn(v_scale, v_scale_max)
-            p_v = (p * v_scale_norm[None, :]).to(tl.float16)
-            pv = tl.dot(p_v, _int8_to_f16(v, CONVERT))
-            acc = tl.fma(acc, re_scale[:, None], pv * v_scale_max)
-            e_max = n_e_max
-
-    # Phase 2: diagonal / tail / custom-mask / sliding-window tiles.
-    for start_n in range(full_end_k, end_k, BLOCK_N):
-        start_n = tl.multiple_of(start_n, BLOCK_N)
-        mask_n = (start_n + offs_n) < cur_seq_kv_len
-        final_mask = mask_m[:, None] & mask_n[None, :]
-
-        if USE_CUSTOM_MASK:
-            custom_mask = tl.load(
-                mask_ptr
-                + cur_seq_mask_start_idx
-                + (cur_block_m * BLOCK_M + offs_m[:, None]) * cur_seq_kv_len
-                + start_n
-                + offs_n[None, :],
-                mask=mask_m[:, None] & mask_n[None, :],
-                other=0,
-            )
-            final_mask &= custom_mask != 0
-        elif IS_CAUSAL:
-            q_abs = cur_seq_prefix_len + cur_block_m * BLOCK_M + offs_m[:, None]
-            k_abs = start_n + offs_n[None, :]
-            final_mask &= q_abs >= k_abs
-
-        if SLIDING_WINDOW_SIZE > 0:
-            q_abs_pos = (
-                cur_window_start
-                + cur_seq_prefix_len
-                + cur_block_m * BLOCK_M
-                + offs_m[:, None]
-            )
-            k_abs_pos = cur_window_start + start_n + offs_n[None, :]
-            window_mask = q_abs_pos <= (k_abs_pos + SLIDING_WINDOW_SIZE)
-            if not IS_CAUSAL:
-                window_mask &= k_abs_pos <= (q_abs_pos + SLIDING_WINDOW_SIZE)
-            final_mask &= window_mask
-
-        SKIP_TILE = False
-        if USE_CUSTOM_MASK or SLIDING_WINDOW_SIZE > 0:
-            SKIP_TILE = tl.max(tl.max(final_mask.to(tl.int32), axis=1), axis=0) == 0
-
-        if not SKIP_TILE:
             offs_kv_loc = tl.load(
                 kv_indices + cur_seq_kv_start_idx + start_n + offs_n,
                 mask=mask_n,
@@ -691,7 +609,9 @@ def _fwd_extend_unified_kernel_int8(
             qk *= (k_scale * sm_scale)[None, :]
             if logit_cap > 0:
                 qk = logit_cap * tanh(qk / logit_cap)
-            qk = tl.where(final_mask, qk, float("-inf"))
+            if not is_full_tile:
+                causal_mask = mask_n[None, :] & (q_abs >= (start_n + offs_n[None, :]))
+                qk = tl.where(causal_mask, qk, float("-inf"))
 
             row_max = tl.max(qk, 1)
             row_max_fixed = tl.where(row_max == float("-inf"), -1e20, row_max)
@@ -699,7 +619,7 @@ def _fwd_extend_unified_kernel_int8(
 
             re_scale = tl.exp(e_max - n_e_max)
             p = tl.exp(qk - n_e_max[:, None])
-            deno = tl.fma(deno, re_scale, tl.sum(p, 1))
+            deno = deno * re_scale + tl.sum(p, 1)
 
             v = tl.load(
                 V_Buffer + offs_kv_loc[:, None] * stride_buf_vbs + base_v,
@@ -711,15 +631,106 @@ def _fwd_extend_unified_kernel_int8(
                 mask=mask_n,
                 other=0.0,
             )
-            # Mask v_scale per row so keys outside final_mask (future tokens or
-            # tokens beyond cur_seq_kv_len) never influence v_scale_max.
-            v_scale_masked = tl.where(final_mask, v_scale[None, :], 0.0)
-            v_scale_max = tl.maximum(tl.max(v_scale_masked, 1), 1e-30)
-            v_scale_norm = tl.div_rn(v_scale_masked, v_scale_max[:, None])
-            p_v = (p * v_scale_norm).to(tl.float16)
+            if is_full_tile:
+                v_scale_max = tl.zeros([BLOCK_M], dtype=tl.float32) + tl.maximum(
+                    tl.max(v_scale, 0), 1e-30
+                )
+            else:
+                causal_mask_v = mask_n[None, :] & (q_abs >= (start_n + offs_n[None, :]))
+                v_scale_masked = tl.where(causal_mask_v, v_scale[None, :], 0.0)
+                v_scale_max = tl.maximum(tl.max(v_scale_masked, 1), 1e-30)
+            p_v = ((p * v_scale[None, :]) / v_scale_max[:, None]).to(tl.float16)
             pv = tl.dot(p_v, _int8_to_f16(v, CONVERT))
-            acc = tl.fma(acc, re_scale[:, None], pv * v_scale_max[:, None])
+            acc = acc * re_scale[:, None] + pv * v_scale_max[:, None]
             e_max = n_e_max
+    else:
+        for start_n in range(start_k, end_k, BLOCK_N):
+            start_n = tl.multiple_of(start_n, BLOCK_N)
+            mask_n = (start_n + offs_n) < cur_seq_kv_len
+            final_mask = mask_m[:, None] & mask_n[None, :]
+
+            if USE_CUSTOM_MASK:
+                custom_mask = tl.load(
+                    mask_ptr
+                    + cur_seq_mask_start_idx
+                    + (cur_block_m * BLOCK_M + offs_m[:, None]) * cur_seq_kv_len
+                    + start_n
+                    + offs_n[None, :],
+                    mask=mask_m[:, None] & mask_n[None, :],
+                    other=0,
+                )
+                final_mask &= custom_mask != 0
+            elif IS_CAUSAL:
+                q_abs = cur_seq_prefix_len + cur_block_m * BLOCK_M + offs_m[:, None]
+                k_abs = start_n + offs_n[None, :]
+                final_mask &= q_abs >= k_abs
+
+            if SLIDING_WINDOW_SIZE > 0:
+                q_abs_pos = (
+                    cur_window_start
+                    + cur_seq_prefix_len
+                    + cur_block_m * BLOCK_M
+                    + offs_m[:, None]
+                )
+                k_abs_pos = cur_window_start + start_n + offs_n[None, :]
+                window_mask = q_abs_pos <= (k_abs_pos + SLIDING_WINDOW_SIZE)
+                if not IS_CAUSAL:
+                    window_mask &= k_abs_pos <= (q_abs_pos + SLIDING_WINDOW_SIZE)
+                final_mask &= window_mask
+
+            SKIP_TILE = False
+            if USE_CUSTOM_MASK or SLIDING_WINDOW_SIZE > 0:
+                SKIP_TILE = (
+                    tl.max(tl.max(final_mask.to(tl.int32), axis=1), axis=0) == 0
+                )
+
+            if not SKIP_TILE:
+                offs_kv_loc = tl.load(
+                    kv_indices + cur_seq_kv_start_idx + start_n + offs_n,
+                    mask=mask_n,
+                    other=0,
+                ).to(tl.int64)
+
+                k_t = tl.load(
+                    K_Buffer + offs_kv_loc[:, None] * stride_buf_kbs + base_k,
+                    mask=mask_n[:, None] & mask_d[None, :],
+                    other=0,
+                )
+                k_scale = tl.load(
+                    K_Scale + offs_kv_loc * stride_ks_bs + cur_kv_head,
+                    mask=mask_n,
+                    other=0.0,
+                )
+                qk = tl.dot(q, tl.trans(_int8_to_f16(k_t, CONVERT)))
+                qk *= (k_scale * sm_scale)[None, :]
+                if logit_cap > 0:
+                    qk = logit_cap * tanh(qk / logit_cap)
+                qk = tl.where(final_mask, qk, float("-inf"))
+
+                row_max = tl.max(qk, 1)
+                row_max_fixed = tl.where(row_max == float("-inf"), -1e20, row_max)
+                n_e_max = tl.maximum(row_max_fixed, e_max)
+
+                re_scale = tl.exp(e_max - n_e_max)
+                p = tl.exp(qk - n_e_max[:, None])
+                deno = deno * re_scale + tl.sum(p, 1)
+
+                v = tl.load(
+                    V_Buffer + offs_kv_loc[:, None] * stride_buf_vbs + base_v,
+                    mask=mask_n[:, None] & mask_dv[None, :],
+                    other=0,
+                )
+                v_scale = tl.load(
+                    V_Scale + offs_kv_loc * stride_vs_bs + cur_kv_head,
+                    mask=mask_n,
+                    other=0.0,
+                )
+                v_scale_masked = tl.where(final_mask, v_scale[None, :], 0.0)
+                v_scale_max = tl.maximum(tl.max(v_scale_masked, 1), 1e-30)
+                p_v = ((p * v_scale[None, :]) / v_scale_max[:, None]).to(tl.float16)
+                pv = tl.dot(p_v, _int8_to_f16(v, CONVERT))
+                acc = acc * re_scale[:, None] + pv * v_scale_max[:, None]
+                e_max = n_e_max
 
     if HAS_SINK:
         cur_sink = tl.load(sink_ptr + cur_head)
