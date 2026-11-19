@@ -207,7 +207,11 @@ class KVCacheQuantMethodBase(ABC):
     def needs_plain_kv_dequant_read(self) -> bool:
         """Whether plain attention reads require dequantizing packed KV first."""
         return any(
-            access.kind == KVCacheAttentionAccessKind.PLAIN
+            access.kind
+            in (
+                KVCacheAttentionAccessKind.PLAIN,
+                KVCacheAttentionAccessKind.FUSED_DEQUANT,
+            )
             and access.storage_dtype is not None
             for access in self.attention_accesses()
         )
@@ -1002,7 +1006,7 @@ class Int8PerTokenHeadKVCacheMethod(KVCacheQuantMethodBase):
         return dequant_int8_per_token_head(
             data=fp4_tensor,
             scale=scales,
-            dtype=dtype or self.plain_attention_kv_dtype(),
+            dtype=dtype or self.plain_attention_kv_dtype() or torch.bfloat16,
         )
 
     def dequantize_prev_kv(
@@ -1142,12 +1146,8 @@ KV_CACHE_ATTENTION_ACCESS_REGISTRY: dict[str, tuple[KVCacheAttentionAccess, ...]
         _plain(_DECODE, _FP4_MX_MHA_BACKENDS, _FP4_MX_SCALE, _BF16),
     ),
     Int8PerTokenHeadKVCacheMethod.name: (
-        _plain(
-            _PREFILL,
-            _INT8_PTH_BACKENDS,
-            _INT8_PTH_SCALE,
-            _BF16,
-            storage_dtype=torch.int8,
+        _fused_dequant(
+            _PREFILL, _INT8_PTH_BACKENDS, _INT8_PTH_SCALE, storage_dtype=torch.int8
         ),
         _fused_dequant(
             _DECODE, _INT8_PTH_BACKENDS, _INT8_PTH_SCALE, storage_dtype=torch.int8

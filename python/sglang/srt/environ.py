@@ -1336,6 +1336,11 @@ class Envs:
     SGLANG_TRITON_DENSE_PREFILL_ATTN = EnvBool(True)
     SGLANG_ENABLE_TORCH_COMPILE = EnvBool(False)
     SGLANG_TRITON_DECODE_SPLIT_TILE_SIZE = EnvInt(256)
+    # Route Triton int8_per_token_head extend through the 1-stage unified kernel
+    # (reads both prefix and current chunk from the quantized cache, matching
+    # decode and deterministic mode) instead of using unquantized BF16 K/V for
+    # the current chunk.
+    SGLANG_ENABLE_TRITON_INT8_UNIFIED_EXTEND = EnvBool(False)
 
     # ===================================================================
     # Expert parallel load balancing

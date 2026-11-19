@@ -1632,39 +1632,35 @@ class TritonAttnBackend(AttentionBackend):
         return output
 
     def _init_int8_kv_reads(self):
-        """Fused decode and per-call prefix dequant for int8_per_token_head pools."""
+        """Fused decode and extend reads for int8_per_token_head pools."""
         from sglang.srt.layers.attention.triton_int8_kv import (
-            dequantized_prefix_kv,
             forward_decode_int8,
-            uses_fused_int8_decode,
+            forward_extend_int8,
+            forward_extend_unified_int8,
+            uses_fused_int8_kv,
         )
 
-        self.int8_fused_decode = uses_fused_int8_decode(
-            quant_method=self.token_to_kv_pool.get_kv_cache_quant_method(),
+        quant_method = self.token_to_kv_pool.get_kv_cache_quant_method()
+        self.int8_fused_decode = uses_fused_int8_kv(
+            quant_method=quant_method,
+            phase="decode",
             page_size=self.page_size,
             dcp_size=self.dcp_size,
         )
+        self.int8_fused_extend = uses_fused_int8_kv(
+            quant_method=quant_method,
+            phase="prefill",
+            page_size=self.page_size,
+            dcp_size=self.dcp_size,
+        )
+        self.int8_unified_extend = (
+            self.int8_fused_extend
+            and envs.SGLANG_ENABLE_TRITON_INT8_UNIFIED_EXTEND.get()
+        )
         self.forward_decode_int8 = torch.compiler.disable(forward_decode_int8)
-        self.dequantized_prefix_kv = torch.compiler.disable(dequantized_prefix_kv)
-
-    def _extend_prefix_kv(self, *, layer, forward_batch, kv_indices, dtype):
-        """Prefix K/V buffers for the extend kernel and the indices it reads them by."""
-        # The gather needs exact-length indices; gpu_only batches over-allocate.
-        if (
-            self.int8_fused_decode
-            and forward_batch.extend_prefix_lens_cpu is not None
-            and (layer.sliding_window_size is None or layer.sliding_window_size <= -1)
-        ):
-            return self.dequantized_prefix_kv(
-                pool=self.token_to_kv_pool,
-                layer_id=layer.layer_id,
-                kv_indices=kv_indices,
-                dtype=dtype,
-            )
-        return (
-            self.token_to_kv_pool.get_key_buffer(layer.layer_id),
-            self.token_to_kv_pool.get_value_buffer(layer.layer_id),
-            kv_indices,
+        self.forward_extend_int8 = torch.compiler.disable(forward_extend_int8)
+        self.forward_extend_unified_int8 = torch.compiler.disable(
+            forward_extend_unified_int8
         )
 
     def _set_kv_buffer(
@@ -1832,8 +1828,10 @@ class TritonAttnBackend(AttentionBackend):
                 q, k, v, layer, forward_batch, causal, logits_soft_cap, sinks
             )
 
-        # Deterministic mode: use unified 1-stage kernel
-        if self.enable_deterministic:
+        # Deterministic mode (or opt-in unified INT8 extend): use unified 1-stage kernel
+        if self.enable_deterministic or (
+            self.int8_unified_extend and save_kv_cache and self.dllm_attention is None
+        ):
             return self._forward_extend_unified(
                 q,
                 o,
@@ -1923,20 +1921,37 @@ class TritonAttnBackend(AttentionBackend):
         ):
             return o
 
-        k_buffer, v_buffer, kv_indices = self._extend_prefix_kv(
-            layer=layer,
-            forward_batch=forward_batch,
-            kv_indices=kv_indices,
-            dtype=q.dtype,
-        )
+        if self.int8_fused_extend and self.dllm_attention is None:
+            self.forward_extend_int8(
+                pool=self.token_to_kv_pool,
+                layer=layer,
+                q=q,
+                k=k,
+                v=v,
+                o=o,
+                qo_indptr=self.forward_metadata.qo_indptr,
+                kv_indptr=kv_indptr,
+                kv_indices=kv_indices,
+                custom_mask=self.forward_metadata.custom_mask,
+                is_causal=causal,
+                mask_indptr=self.forward_metadata.mask_indptr,
+                max_len_extend=self.forward_metadata.max_extend_len,
+                logit_cap=logits_soft_cap,
+                sliding_window_size=sliding_window_size,
+                sinks=sinks,
+                window_kv_offsets=window_kv_offsets,
+                score_mod=score_mod,
+            )
+            return o
+
         self._forward_extend_kernel(
             layer,
             q.view(-1, layer.tp_q_head_num, layer.qk_head_dim),
             k.contiguous() if self.dllm_attention is None else k,
             v.contiguous() if self.dllm_attention is None else v,
             o.view(-1, layer.tp_q_head_num, layer.v_head_dim),
-            k_buffer,
-            v_buffer,
+            self.token_to_kv_pool.get_key_buffer(layer.layer_id),
+            self.token_to_kv_pool.get_value_buffer(layer.layer_id),
             self.forward_metadata.qo_indptr,
             kv_indptr,
             kv_indices,
@@ -2299,6 +2314,28 @@ class TritonAttnBackend(AttentionBackend):
         else:
             k_descale = 1.0
             v_descale = 1.0
+
+        if self.int8_fused_extend:
+            self.forward_extend_unified_int8(
+                pool=self.token_to_kv_pool,
+                layer=layer,
+                q=q,
+                o=o,
+                qo_indptr=self.forward_metadata.qo_indptr,
+                kv_indptr=unified_kv_indptr,
+                kv_indices=unified_kv_indices,
+                prefix_lens=prefix_lens,
+                max_len_extend=self.forward_metadata.max_extend_len,
+                custom_mask=self.forward_metadata.custom_mask,
+                mask_indptr=self.forward_metadata.mask_indptr,
+                logit_cap=logits_soft_cap,
+                is_causal=causal,
+                sliding_window_size=sliding_window_size,
+                sinks=sinks,
+                window_start_pos=window_start_pos,
+                score_mod=score_mod,
+            )
+            return o
 
         # Call unified kernel
         self.extend_attention_fwd_unified(

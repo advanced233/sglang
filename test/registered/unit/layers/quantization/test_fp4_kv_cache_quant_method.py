@@ -450,18 +450,96 @@ class TestInt8PerTokenHeadKVCacheMethod(CustomTestCase):
         self.assertEqual(m.kv_storage_dtype(), torch.int8)
         self.assertTrue(m.needs_plain_kv_dequant_read())
         self.assertFalse(m.needs_dequant_workspace())
-        self.assertEqual(m.plain_attention_kv_dtype(), torch.bfloat16)
-        # Triton decode reads int8 + scales in-kernel; extend still dequantizes.
-        self.assertEqual(
-            m.resolve_attention_access("prefill", "triton").kind,
-            KVCacheAttentionAccessKind.PLAIN,
-        )
-        self.assertEqual(
-            m.resolve_attention_access("decode", "triton").kind,
-            KVCacheAttentionAccessKind.FUSED_DEQUANT,
-        )
+        self.assertIsNone(m.plain_attention_kv_dtype())
+        # Both Triton prefill/extend and decode read int8 + scales in-kernel.
         for phase in ("prefill", "decode"):
+            self.assertEqual(
+                m.resolve_attention_access(phase, "triton").kind,
+                KVCacheAttentionAccessKind.FUSED_DEQUANT,
+            )
             self.assertIsNone(m.resolve_attention_access(phase, "flashinfer"))
+
+    def test_uses_fused_int8_kv_gating(self):
+        """Triton fused read activates for both phases and rejects page_size != 1 / DCP."""
+        from sglang.srt.layers.attention.triton_int8_kv import uses_fused_int8_kv
+        from sglang.srt.layers.quantization.fp4_kv_cache_quant_method import (
+            FP4MXBlock16KVCacheMethod,
+            Int8PerTokenHeadKVCacheMethod,
+        )
+
+        m = Int8PerTokenHeadKVCacheMethod()
+        for phase in ("prefill", "decode"):
+            self.assertTrue(
+                uses_fused_int8_kv(
+                    quant_method=m, phase=phase, page_size=1, dcp_size=1
+                )
+            )
+            with self.assertRaises(NotImplementedError):
+                uses_fused_int8_kv(
+                    quant_method=m, phase=phase, page_size=16, dcp_size=1
+                )
+            with self.assertRaises(NotImplementedError):
+                uses_fused_int8_kv(
+                    quant_method=m, phase=phase, page_size=1, dcp_size=2
+                )
+            self.assertFalse(
+                uses_fused_int8_kv(
+                    quant_method=None, phase=phase, page_size=1, dcp_size=1
+                )
+            )
+            self.assertFalse(
+                uses_fused_int8_kv(
+                    quant_method=FP4MXBlock16KVCacheMethod(),
+                    phase=phase,
+                    page_size=1,
+                    dcp_size=1,
+                )
+            )
+
+    def test_compatibility_allows_deterministic_inference(self):
+        """Deterministic inference is allowed now that unified extend is fused."""
+        from sglang.srt.arg_groups.kv_cache_hook import (
+            handle_int8_kv_cache_compatibility,
+        )
+
+        server_args = SimpleNamespace(
+            kv_cache_dtype="int8_per_token_head",
+            attention_backend="triton",
+            prefill_attention_backend=None,
+            decode_attention_backend=None,
+            enable_hierarchical_cache=False,
+            enable_lmcache=False,
+            enable_unified_memory=False,
+            disaggregation_mode="null",
+            speculative_algorithm=None,
+            enable_deterministic_inference=True,
+        )
+        with (
+            patch(
+                "sglang.srt.arg_groups.kv_cache_hook.get_platform",
+                return_value=SimpleNamespace(is_cuda=True),
+            ),
+            patch(
+                "sglang.srt.arg_groups.kv_cache_hook.use_mla_backend",
+                return_value=False,
+            ),
+            patch(
+                "sglang.srt.arg_groups.kv_cache_hook.resolving_view",
+                side_effect=lambda x: x,
+            ),
+            patch(
+                "sglang.srt.arg_groups.kv_cache_hook.resolved_view",
+                side_effect=lambda x: x,
+            ),
+            patch(
+                "sglang.srt.arg_groups.kv_cache_hook.attention_backends_of",
+                return_value=("triton", "triton"),
+            ),
+        ):
+            handle_int8_kv_cache_compatibility(server_args)
+            server_args.enable_hierarchical_cache = True
+            with self.assertRaises(ValueError):
+                handle_int8_kv_cache_compatibility(server_args)
 
     def test_cell_size_matches_allocation(self):
         """Capacity planning must count exactly the bytes create_buffers allocates."""

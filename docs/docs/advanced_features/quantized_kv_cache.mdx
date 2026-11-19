@@ -38,10 +38,11 @@ FP4 quantization is currently experimental.
 ### INT8 Per-Token-Head Format
 
 <Warning>
-INT8 KV cache is currently experimental. It requires `--attention-backend triton`, page size 1, and MHA models. Decode reads the INT8 cache directly in the attention kernel; prefill dequantizes only the prefix rows it reads.
+INT8 KV cache is currently experimental. It requires `--attention-backend triton`, page size 1, and MHA models. Both decode and prefill/extend read the INT8 cache and per-token scales directly in the attention kernels.
 </Warning>
 
 - **`int8_per_token_head`**: Symmetric INT8 with one FP32 scale per token and KV head (absmax / 127), the same recipe as vLLM's `int8_per_token_head`. It works on GPUs without FP8 support, such as A100.
+- **Extend semantics**: By default, prefill/extend reads cached prefixes in INT8 while attending to the current chunk's K/V in unquantized BF16 (`chunk_bf16`). Because a cached prefix was quantized while a fresh prefill attends to it in BF16, `prefill_cache_hit` logprobs have a small non-zero KL divergence against fresh prefill. Pass `--enable-deterministic-inference` (or set `SGLANG_ENABLE_TRITON_INT8_UNIFIED_EXTEND=1`) to use the 1-stage unified INT8 extend kernel (`chunk_q`), which reads both prefix and current chunk back from the quantized cache for consistent cache-hit and prefill/decode numerics.
 
 ## Usage
 

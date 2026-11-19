@@ -372,6 +372,13 @@ decode 是访存瓶颈：每步要读一遍权重，再读一遍所有请求的 
     - TTFT 多 4%：prefill 多了 INT8 写入和前缀取行反量化。M3c 的融合 extend 可以把后一项去掉。
     - 对照 vLLM（阶段 0，同一张卡）：vLLM INT8 的 decode 比自己的 BF16 慢约 1.5 倍；SGLang INT8 比 BF16 快 1.21 倍。
 - **M3c**：extend 和确定性模式，以及当前 chunk 的数值语义（下面第 3、4 条）。
+  - **实现**（代码在 `kv-int8-int4-gemini`，GPU 手册见 [`stage2_m3c_runbook.md`](stage2_m3c_runbook.md)）：
+    - 融合 extend kernel（`python/sglang/kernels/ops/attention/extend_attention_int8.py`，注册进 `kops/attention/__init__.py`）：
+      - `extend_attention_fwd_int8`（2-stage，`chunk_bf16`）：Stage 1 直接读池子里的 int8 K/V 和 fp32 scale（复用 M3a 的 `_int8_to_f16` 与 `v_scale_max` 缩放技巧），不分配任何前缀反量化临时显存；Stage 2 保持 BF16 `k_extend` / `v_extend`。
+      - `extend_attention_fwd_unified_int8`（1-stage，`chunk_q` 与确定性模式）：前缀和当前 chunk 全部从 int8 池子读回，KV 分块固定从位置 0 按 `BLOCK_N` 对齐，保证批次与前缀切分不变性。
+    - 配方与后端接入：`Int8PerTokenHeadKVCacheMethod` 的 `prefill` 与 `decode` 均声明为 `FUSED_DEQUANT`（保留 `needs_plain_kv_dequant_read()` 对 plain 调用方的兼容）；`triton_int8_kv.py` 与 `triton_backend.py` 去掉了 M3b 的前缀取行反量化，接入上述两个融合 kernel；新增开关 `SGLANG_ENABLE_TRITON_INT8_UNIFIED_EXTEND`（默认关闭，保持 `chunk_bf16`）用于在非确定性模式下切换 `chunk_q` 语义。
+    - 确定性模式：`handle_int8_kv_cache_compatibility` 放开 `--enable-deterministic-inference`；确定性模式下 extend 自动走 `extend_attention_fwd_unified_int8`，decode 走 `decode_attention_fwd_int8`（固定 `split_tile_size=256`）。
+    - 文档与测试：更新 `docs/docs/advanced_features/quantized_kv_cache.mdx` 说明两种语义及默认 `chunk_bf16` 下 `prefill_cache_hit` KL 非零；新增 `test_extend_attention_int8.py`、补充 `test_triton_attention_kernels.py` 四路径用例与 `test_fp4_kv_cache_quant_method.py` 单测；新增 `benchmark/kv_lowbit/m3c_extend_eval.py`（冷 L2 extend 微基准 + 离线 KL 一致性评测）。
 
 1. **新的访问方式**：在 `KVCacheAttentionAccessKind` 里新增一种（名字和形状要和维护者商量），让池子把原始的 int8 buffer 和 scale buffer 直接交给后端，不再走整层反量化。
    - 这是 API 改动。实现之前先在上游开一个 RFC issue，说明动机：Ampere 上没有低比特 KV，而 `fp4_mx_block16` 在 Triton 后端上是整层反量化。
