@@ -1,0 +1,14 @@
+# M3c 快速复测
+
+- 测试代码提交 `f0e440f`。
+- 状态与退出码：
+
+```text
+start=2026-11-20T00:38:57+08:00 commit=f0e440f966df593c3c3aef9d4770e80eeb14bb93
+extend_exit=0
+attention_exit=0
+kernel_exit=0
+kl_exit=0
+experiments_end=2026-11-20T00:43:38+08:00
+
+```

@@ -1,0 +1,52 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.16, pytest-9.2.0, pluggy-1.7.0 -- $KVQ_WORK/envs/sglang/bin/python
+cachedir: .pytest_cache
+rootdir: $KVQ_WORK/src/sglang/test
+configfile: pytest.ini
+plugins: anyio-4.15.1, cov-7.1.0
+collecting ... collected 35 items
+
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4-causal-magic] PASSED [  2%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4-causal-cast] PASSED [  5%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4-noncausal-magic] PASSED [  8%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4-noncausal-cast] PASSED [ 11%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa8_d64-causal-magic] PASSED [ 14%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa8_d64-causal-cast] PASSED [ 17%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa8_d64-noncausal-magic] PASSED [ 20%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa8_d64-noncausal-cast] PASSED [ 22%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[mha_logit_cap-causal-magic] PASSED [ 25%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[mha_logit_cap-causal-cast] PASSED [ 28%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[mha_logit_cap-noncausal-magic] PASSED [ 31%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[mha_logit_cap-noncausal-cast] PASSED [ 34%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4_d80-causal-magic] PASSED [ 37%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4_d80-causal-cast] PASSED [ 40%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4_d80-noncausal-magic] PASSED [ 42%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_extend_matches_reference[gqa4_d80-noncausal-cast] PASSED [ 45%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4-causal-magic] PASSED [ 48%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4-causal-cast] PASSED [ 51%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4-noncausal-magic] PASSED [ 54%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4-noncausal-cast] PASSED [ 57%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa8_d64-causal-magic] PASSED [ 60%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa8_d64-causal-cast] PASSED [ 62%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa8_d64-noncausal-magic] PASSED [ 65%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa8_d64-noncausal-cast] PASSED [ 68%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[mha_logit_cap-causal-magic] PASSED [ 71%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[mha_logit_cap-causal-cast] PASSED [ 74%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[mha_logit_cap-noncausal-magic] PASSED [ 77%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[mha_logit_cap-noncausal-cast] PASSED [ 80%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4_d80-causal-magic] PASSED [ 82%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4_d80-causal-cast] PASSED [ 85%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4_d80-noncausal-magic] PASSED [ 88%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_matches_reference[gqa4_d80-noncausal-cast] PASSED [ 91%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_prefix_split_invariant PASSED [ 94%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_unified_extend_chunked_kv_len_invariant PASSED [ 97%]
+test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_and_unified_match_when_chunk_is_dequantized PASSED [100%]
+
+=============================== warnings summary ===============================
+../../envs/sglang/lib/python3.12/site-packages/_pytest/config/__init__.py:1636
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/_pytest/config/__init__.py:1636: PytestConfigWarning: Unknown config option: asyncio_mode
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 35 passed, 1 warning in 33.35s ========================
