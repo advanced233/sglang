@@ -1,0 +1,30 @@
+{"group": "server", "tag": "sglang-int8-triton", "config": "sglang-int8-triton", "engine": "sglang", "config_args": ["--attention-backend", "triton", "--kv-cache-dtype", "int8_per_token_head"], "extra_args": [], "ready": true, "ready_s": 50, "capacity_tokens": 235787, "default_backend": null, "mem_fraction_static": 0.823, "decode_graph_max_bs": 32, "error_tail": null, "time": "2026-11-19 20:41:43"}
+{"group": "m3b", "config": "sglang-int8-triton", "tag": "sglang-int8-triton", "input_len": 16384, "output_len": 1024, "concurrency": 6, "num_prompts": 12, "seed": 2606, "capacity_tokens": 235787, "status": "ok", "retried": false, "foreign_pids": [], "telemetry": {"samples": 86, "temp_max": 67.0, "temp_mean": 59.5, "sm_clock_min": 1065.0, "sm_clock_median": 1215.0, "power_max": 277.0, "thermal_frac": 0.0, "power_cap_frac": 0.8372093023255814, "hw_slowdown_frac": 0.0}, "completed": 12, "duration": 76.89525759709068, "output_throughput": 159.8017925160695, "input_throughput": 2556.828680257112, "request_throughput": 0.15605643800397412, "median_tpot_ms": 29.41104802002589, "mean_tpot_ms": 28.862773895970136, "p99_tpot_ms": 36.02701726124667, "median_ttft_ms": 8335.08745150175, "median_itl_ms": 19.705710001289845, "max_concurrent_requests": 12, "total_input_tokens": 196608, "total_output_tokens": 12288, "time": "2026-11-19 20:43:18"}
+{"group": "m3b", "config": "sglang-int8-triton", "tag": "sglang-int8-triton", "input_len": 16384, "output_len": 1024, "concurrency": 13, "num_prompts": 26, "seed": 2613, "capacity_tokens": 235787, "status": "ok", "retried": false, "foreign_pids": [], "telemetry": {"samples": 144, "temp_max": 74.0, "temp_mean": 69.2, "sm_clock_min": 1035.0, "sm_clock_median": 1155.0, "power_max": 288.69, "thermal_frac": 0.0, "power_cap_frac": 0.8958333333333334, "hw_slowdown_frac": 0.0}, "completed": 26, "duration": 140.28220768808387, "output_throughput": 189.78885803678116, "input_throughput": 3036.6217285884986, "request_throughput": 0.1853406816765441, "median_tpot_ms": 47.10637596092175, "mean_tpot_ms": 46.55089475491203, "p99_tpot_ms": 66.97990694375734, "median_ttft_ms": 21914.012575522065, "median_itl_ms": 27.337169973179698, "max_concurrent_requests": 26, "total_input_tokens": 425984, "total_output_tokens": 26624, "time": "2026-11-19 20:45:56"}
+{"group": "pool", "config": "sglang-int8-triton", "tag": "sglang-int8-triton", "input_len": 1024, "output_len": 1024, "concurrency": 1, "num_prompts": 8, "seed": 7, "capacity_tokens": 235787, "pool_tokens": 235787, "status": "ok", "retried": false, "foreign_pids": [], "telemetry": {"samples": 109, "temp_max": 73.0, "temp_mean": 70.2, "sm_clock_min": 765.0, "sm_clock_median": 1275.0, "power_max": 256.34, "thermal_frac": 0.0, "power_cap_frac": 0.8715596330275229, "hw_slowdown_frac": 0.0}, "completed": 8, "duration": 107.85926642408594, "output_throughput": 75.95082250782536, "input_throughput": 75.95082250782536, "request_throughput": 0.07417072510529821, "median_tpot_ms": 13.09453683130567, "mean_tpot_ms": 13.092585866415067, "p99_tpot_ms": 13.105770189923673, "median_ttft_ms": 93.43844349496067, "median_itl_ms": 13.094147085212171, "max_concurrent_requests": 2, "total_input_tokens": 8192, "total_output_tokens": 8192, "time": "2026-11-19 20:47:59"}
+# M0 serving baselines
+
+- GPU NVIDIA A100-PCIE-40GB (driver 550.127.05, power limit 250.00 W, max SM 1410 MHz); CUDA forward compat: True
+- SGLang `f8499e359b17`, torch 2.14.1 (CUDA 13.0), triton 3.8.0, flashinfer 0.7.2, sglang-kernel 0.4.10
+- vLLM env: 0.32.0 2.13.0+cu129 12.9
+
+## Servers
+
+| server | ready | load s | KV dtype | KV tokens | backend | mem fraction / util | decode graph max bs |
+|---|---|---:|---|---:|---|---:|---:|
+| sglang-int8-triton | yes | 50 | int8_per_token_head | 235,787 | triton | 0.823 | 32 |
+
+## M3b: BF16 vs fused INT8 decode (Triton)
+
+| config | input | conc | prompts | out tok/s | median ITL ms | median TPOT ms | median TTFT ms | max temp C | min SM MHz | thermal | power cap | note |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| sglang-int8-triton | 16384 | 6 | 12 | 159.8 | 19.71 | 29.41 | 8335 | 67 | 1065 | 0% | 84% |  |
+| sglang-int8-triton | 16384 | 13 | 26 | 189.8 | 27.34 | 47.11 | 21914 | 74 | 1035 | 0% | 90% |  |
+
+## Decode probe vs pool size (input 1024, concurrency 1)
+
+| config | pool tokens | median TPOT ms | out tok/s | max temp C | min SM MHz | thermal | power cap |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| sglang-int8-triton | 235,787 | 13.09 | 76.0 | 73 | 765 | 0% | 87% |
+
+

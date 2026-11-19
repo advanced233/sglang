@@ -1,0 +1,56 @@
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (1183421 > 131072). Running this sequence through the model will result in indexing errors
+Loaded 32 prompts of 1024 tokens from 203 files (1183421 tokens).
+{"kind": "server", "config": "int8-chunk-bf16", "ready": true, "ready_s": 140.0, "extra_args": ["--attention-backend", "triton", "--kv-cache-dtype", "int8_per_token_head", "--sampling-backend", "pytorch"], "extra_env": {}, "capacity_tokens": 235787, "default_backend": null, "mem_fraction_static": 0.823, "decode_graph_max_bs": 32, "error_tail": null}
+{"kind": "kl", "config": "int8-chunk-bf16", "check": "match", "hit_samples": 32, "total_samples": 32, "gen_s": 11.49, "prefill_s": 4.4, "samples": 32, "tokens": 16384, "avg_kl_div": 0.001445731926938807, "p99_kl": 0.006050274380013673, "max_kl": 8.623398890127469, "max_abs_logp_diff": 9.623332723393105, "frac_kl_gt_1e4": 0.1092529296875, "frac_kl_gt_1e2": 0.0059814453125}
+{"kind": "kl", "config": "int8-chunk-bf16", "check": "prefill_cache_hit", "hit_samples": 32, "total_samples": 32, "gen_s": 8.91, "prefill_s": 4.41, "samples": 32, "tokens": 16384, "avg_kl_div": 0.0013783308540734924, "p99_kl": 0.0054959587942671525, "max_kl": 7.931598505103432, "max_abs_logp_diff": 8.931466341018677, "frac_kl_gt_1e4": 0.11712646484375, "frac_kl_gt_1e2": 0.00567626953125}
+{"kind": "kl", "config": "int8-chunk-bf16", "check": "decode_cache_hit", "hit_samples": 32, "total_samples": 32, "gen_s": 9.47, "prefill_s": 6.11, "samples": 32, "tokens": 16384, "avg_kl_div": 0.0007524389112695258, "p99_kl": 0.005748316988323317, "max_kl": 3.194827125279065, "max_abs_logp_diff": 4.179521292448044, "frac_kl_gt_1e4": 0.08538818359375, "frac_kl_gt_1e2": 0.00537109375}
+{"kind": "kl", "config": "int8-chunk-bf16", "check": "prefill_cached_vs_fresh", "hit_samples": 32, "total_samples": 32, "gen_s": 1.61, "prefill_s": 2.76, "samples": 32, "tokens": 16352, "avg_kl_div": 0.0016236968306176265, "p99_kl": 0.020351874974233016, "max_kl": 6.344315763802767, "max_abs_logp_diff": 2.2624696642160416, "frac_kl_gt_1e4": 0.19704011741682975, "frac_kl_gt_1e2": 0.018407534246575343}
+{"kind": "server", "config": "int8-chunk-q", "ready": true, "ready_s": 70.0, "extra_args": ["--attention-backend", "triton", "--kv-cache-dtype", "int8_per_token_head", "--sampling-backend", "pytorch"], "extra_env": {"SGLANG_ENABLE_TRITON_INT8_UNIFIED_EXTEND": "1"}, "capacity_tokens": 235787, "default_backend": null, "mem_fraction_static": 0.823, "decode_graph_max_bs": 32, "error_tail": null}
+{"kind": "kl", "config": "int8-chunk-q", "check": "match", "hit_samples": 32, "total_samples": 32, "gen_s": 12.67, "prefill_s": 6.19, "samples": 32, "tokens": 16384, "avg_kl_div": 0.00021088614219305927, "p99_kl": 0.00324946984588027, "max_kl": 0.9050593532079673, "max_abs_logp_diff": 1.727294683456421, "frac_kl_gt_1e4": 0.09381103515625, "frac_kl_gt_1e2": 0.0018310546875}
+{"kind": "kl", "config": "int8-chunk-q", "check": "prefill_cache_hit", "hit_samples": 32, "total_samples": 32, "gen_s": 9.5, "prefill_s": 6.23, "samples": 32, "tokens": 16384, "avg_kl_div": 0.0003706566545579675, "p99_kl": 0.003374324103601313, "max_kl": 3.0361389907044294, "max_abs_logp_diff": 4.0181528329935645, "frac_kl_gt_1e4": 0.09893798828125, "frac_kl_gt_1e2": 0.00146484375}
+{"kind": "kl", "config": "int8-chunk-q", "check": "decode_cache_hit", "hit_samples": 32, "total_samples": 32, "gen_s": 9.75, "prefill_s": 9.66, "samples": 32, "tokens": 16384, "avg_kl_div": 0.00013205079543524668, "p99_kl": 0.0029264446746461626, "max_kl": 0.11383752500544864, "max_abs_logp_diff": 0.4420391917228699, "frac_kl_gt_1e4": 0.07720947265625, "frac_kl_gt_1e2": 0.0013427734375}
+{"kind": "kl", "config": "int8-chunk-q", "check": "prefill_cached_vs_fresh", "hit_samples": 32, "total_samples": 32, "gen_s": 2.28, "prefill_s": 3.61, "samples": 32, "tokens": 16352, "avg_kl_div": 8.003162127062795e-05, "p99_kl": 0.0005746362286314222, "max_kl": 0.20914787395148382, "max_abs_logp_diff": 0.7246572971343994, "frac_kl_gt_1e4": 0.013820939334637964, "frac_kl_gt_1e2": 0.001406555772994129}
+{"kind": "server", "config": "int8-det", "ready": true, "ready_s": 70.0, "extra_args": ["--attention-backend", "triton", "--kv-cache-dtype", "int8_per_token_head", "--sampling-backend", "pytorch", "--enable-deterministic-inference"], "extra_env": {}, "capacity_tokens": 235787, "default_backend": null, "mem_fraction_static": 0.823, "decode_graph_max_bs": 32, "error_tail": null}
+{"kind": "kl", "config": "int8-det", "check": "match", "hit_samples": 32, "total_samples": 32, "gen_s": 23.71, "prefill_s": 7.77, "samples": 32, "tokens": 16384, "avg_kl_div": 0.00016197501431834232, "p99_kl": 0.003103353744739068, "max_kl": 0.33020296840211616, "max_abs_logp_diff": 0.9393026232719421, "frac_kl_gt_1e4": 0.0888671875, "frac_kl_gt_1e2": 0.00177001953125}
+{"kind": "kl", "config": "int8-det", "check": "prefill_cache_hit", "hit_samples": 32, "total_samples": 32, "gen_s": 19.43, "prefill_s": 7.83, "samples": 32, "tokens": 16384, "avg_kl_div": 0.0001630266428621348, "p99_kl": 0.0031155446917297395, "max_kl": 0.33020296840211616, "max_abs_logp_diff": 0.9393026232719421, "frac_kl_gt_1e4": 0.08892822265625, "frac_kl_gt_1e2": 0.00189208984375}
+{"kind": "kl", "config": "int8-det", "check": "decode_cache_hit", "hit_samples": 32, "total_samples": 32, "gen_s": 20.41, "prefill_s": 11.87, "samples": 32, "tokens": 16384, "avg_kl_div": 0.0007199609371511832, "p99_kl": 0.0022776913954349006, "max_kl": 9.372626945836394, "max_abs_logp_diff": 10.37259566783905, "frac_kl_gt_1e4": 0.05999755859375, "frac_kl_gt_1e2": 0.0013427734375}
+{"kind": "kl", "config": "int8-det", "check": "prefill_cached_vs_fresh", "hit_samples": 32, "total_samples": 32, "gen_s": 2.64, "prefill_s": 4.65, "samples": 32, "tokens": 16352, "avg_kl_div": 0.03842832237433409, "p99_kl": 0.0006407272319067015, "max_kl": 626.1901121856093, "max_abs_logp_diff": 6.451483488082886, "frac_kl_gt_1e4": 0.014126712328767123, "frac_kl_gt_1e2": 0.0011619373776908023}
+{"kind": "server", "config": "bf16-det", "ready": true, "ready_s": 60.0, "extra_args": ["--attention-backend", "triton", "--sampling-backend", "pytorch", "--enable-deterministic-inference"], "extra_env": {}, "capacity_tokens": 121578, "default_backend": null, "mem_fraction_static": 0.823, "decode_graph_max_bs": 32, "error_tail": null}
+{"kind": "kl", "config": "bf16-det", "check": "match", "hit_samples": 32, "total_samples": 32, "gen_s": 23.23, "prefill_s": 6.26, "samples": 32, "tokens": 16384, "avg_kl_div": 0.00016762931764665242, "p99_kl": 0.0024566307036908027, "max_kl": 1.0630493746300547, "max_abs_logp_diff": 1.915829747915268, "frac_kl_gt_1e4": 0.08380126953125, "frac_kl_gt_1e2": 0.00048828125}
+{"kind": "kl", "config": "bf16-det", "check": "prefill_cache_hit", "hit_samples": 32, "total_samples": 32, "gen_s": 19.6, "prefill_s": 6.32, "samples": 32, "tokens": 16384, "avg_kl_div": 0.00016762931764665242, "p99_kl": 0.0024566307036908027, "max_kl": 1.0630493746300547, "max_abs_logp_diff": 1.915829747915268, "frac_kl_gt_1e4": 0.08380126953125, "frac_kl_gt_1e2": 0.00048828125}
+{"kind": "kl", "config": "bf16-det", "check": "decode_cache_hit", "hit_samples": 32, "total_samples": 32, "gen_s": 20.67, "prefill_s": 8.91, "samples": 32, "tokens": 16384, "avg_kl_div": 5.64954778154445e-05, "p99_kl": 0.001415618962612299, "max_kl": 0.02491066445517298, "max_abs_logp_diff": 0.2318286895751953, "frac_kl_gt_1e4": 0.04840087890625, "frac_kl_gt_1e2": 0.0003662109375}
+{"kind": "kl", "config": "bf16-det", "check": "prefill_cached_vs_fresh", "hit_samples": 32, "total_samples": 32, "gen_s": 2.09, "prefill_s": 3.94, "samples": 32, "tokens": 16352, "avg_kl_div": 0.0, "p99_kl": 0.0, "max_kl": 0.0, "max_abs_logp_diff": 0.0, "frac_kl_gt_1e4": 0.0, "frac_kl_gt_1e2": 0.0}
+
+# M3c Extend Kernel & KL Consistency Summary
+
+## Server Startup & KV Capacity
+
+| Config | Ready | Ready s | KV Capacity (tokens) | mem_frac |
+|---|---:|---:|---:|---:|
+| `int8-chunk-bf16` | True | 140.0 | 235787 | 0.823 |
+| `int8-chunk-q` | True | 70.0 | 235787 | 0.823 |
+| `int8-det` | True | 70.0 | 235787 | 0.823 |
+| `bf16-det` | True | 60.0 | 121578 | 0.823 |
+
+## Offline KL Consistency Checks
+
+| Config | Check | Hits | Avg KL | p99 KL | Max KL | Max |Δlogp| | >1e-4 | >1e-2 |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `int8-chunk-bf16` | `match` | 32/32 | 0.001446 | 0.006050 | 8.623399 | 9.623333 | 10.93% | 0.60% |
+| `int8-chunk-bf16` | `prefill_cache_hit` | 32/32 | 0.001378 | 0.005496 | 7.931599 | 8.931466 | 11.71% | 0.57% |
+| `int8-chunk-bf16` | `decode_cache_hit` | 32/32 | 7.524e-04 | 0.005748 | 3.194827 | 4.179521 | 8.54% | 0.54% |
+| `int8-chunk-bf16` | `prefill_cached_vs_fresh` | 32/32 | 0.001624 | 0.020352 | 6.344316 | 2.262470 | 19.70% | 1.84% |
+| `int8-chunk-q` | `match` | 32/32 | 2.109e-04 | 0.003249 | 0.905059 | 1.727295 | 9.38% | 0.18% |
+| `int8-chunk-q` | `prefill_cache_hit` | 32/32 | 3.707e-04 | 0.003374 | 3.036139 | 4.018153 | 9.89% | 0.15% |
+| `int8-chunk-q` | `decode_cache_hit` | 32/32 | 1.321e-04 | 0.002926 | 0.113838 | 0.442039 | 7.72% | 0.13% |
+| `int8-chunk-q` | `prefill_cached_vs_fresh` | 32/32 | 8.003e-05 | 5.746e-04 | 0.209148 | 0.724657 | 1.38% | 0.14% |
+| `int8-det` | `match` | 32/32 | 1.620e-04 | 0.003103 | 0.330203 | 0.939303 | 8.89% | 0.18% |
+| `int8-det` | `prefill_cache_hit` | 32/32 | 1.630e-04 | 0.003116 | 0.330203 | 0.939303 | 8.89% | 0.19% |
+| `int8-det` | `decode_cache_hit` | 32/32 | 7.200e-04 | 0.002278 | 9.372627 | 10.372596 | 6.00% | 0.13% |
+| `int8-det` | `prefill_cached_vs_fresh` | 32/32 | 0.038428 | 6.407e-04 | 626.190112 | 6.451483 | 1.41% | 0.12% |
+| `bf16-det` | `match` | 32/32 | 1.676e-04 | 0.002457 | 1.063049 | 1.915830 | 8.38% | 0.05% |
+| `bf16-det` | `prefill_cache_hit` | 32/32 | 1.676e-04 | 0.002457 | 1.063049 | 1.915830 | 8.38% | 0.05% |
+| `bf16-det` | `decode_cache_hit` | 32/32 | 5.650e-05 | 0.001416 | 0.024911 | 0.231829 | 4.84% | 0.04% |
+| `bf16-det` | `prefill_cached_vs_fresh` | 32/32 | 0 | 0 | 0 | 0 | 0.00% | 0.00% |
+
+

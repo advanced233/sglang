@@ -1,0 +1,3 @@
+cpu_exit=0
+gpu_exit=0
+attention_exit=0

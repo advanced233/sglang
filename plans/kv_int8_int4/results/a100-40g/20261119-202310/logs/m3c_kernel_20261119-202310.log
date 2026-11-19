@@ -1,0 +1,39 @@
+{"shape": "prefix-hit", "batch": 4, "prefix": 8192, "extend": 512, "impl": "bf16-regular", "median_ms": 4.0428, "p20_ms": 4.0397, "p80_ms": 4.0458, "temp_mb": 0.0, "cos_vs_bf16": 0.9999974, "max_abs_vs_bf16": 0.00033, "cos_vs_exact": 0.9999974, "max_abs_vs_exact": 0.00033, "cuda_graph": true}
+{"shape": "prefix-hit", "batch": 4, "prefix": 8192, "extend": 512, "impl": "bf16-unified", "median_ms": 3.969, "p20_ms": 3.966, "p80_ms": 3.9711, "temp_mb": 0.0, "cos_vs_bf16": 0.9999974, "max_abs_vs_bf16": 0.00033, "cos_vs_exact": 0.9999974, "max_abs_vs_exact": 0.00033, "cuda_graph": true}
+{"shape": "prefix-hit", "batch": 4, "prefix": 8192, "extend": 512, "impl": "int8-m3b-gather", "median_ms": 4.1882, "p20_ms": 4.1871, "p80_ms": 4.1923, "temp_mb": 134.48, "cos_vs_bf16": 0.9999534, "max_abs_vs_bf16": 0.00165, "cos_vs_exact": 0.9999945, "max_abs_vs_exact": 0.00062, "cuda_graph": false}
+{"shape": "prefix-hit", "batch": 4, "prefix": 8192, "extend": 512, "impl": "int8-fused-regular", "median_ms": 8.3722, "p20_ms": 8.3542, "p80_ms": 8.3986, "temp_mb": 0.0, "cos_vs_bf16": 0.999957, "max_abs_vs_bf16": 0.00136, "cos_vs_exact": 0.9999986, "max_abs_vs_exact": 0.00035, "cuda_graph": true}
+{"shape": "prefix-hit", "batch": 4, "prefix": 8192, "extend": 512, "impl": "int8-fused-unified", "median_ms": 26.7556, "p20_ms": 26.7084, "p80_ms": 26.8249, "temp_mb": 0.0, "cos_vs_bf16": 0.9999557, "max_abs_vs_bf16": 0.00138, "cos_vs_exact": 0.9999986, "max_abs_vs_exact": 0.00037, "cuda_graph": true}
+{"shape": "late-chunk", "batch": 1, "prefix": 14336, "extend": 2048, "impl": "bf16-regular", "median_ms": 7.2571, "p20_ms": 7.255, "p80_ms": 7.2591, "temp_mb": 0.0, "cos_vs_bf16": 0.9999973, "max_abs_vs_bf16": 0.00028, "cos_vs_exact": 0.9999973, "max_abs_vs_exact": 0.00028, "cuda_graph": true}
+{"shape": "late-chunk", "batch": 1, "prefix": 14336, "extend": 2048, "impl": "bf16-unified", "median_ms": 7.6247, "p20_ms": 7.6216, "p80_ms": 7.6288, "temp_mb": 0.0, "cos_vs_bf16": 0.9999974, "max_abs_vs_bf16": 0.00028, "cos_vs_exact": 0.9999974, "max_abs_vs_exact": 0.00028, "cuda_graph": true}
+{"shape": "late-chunk", "batch": 1, "prefix": 14336, "extend": 2048, "impl": "int8-m3b-gather", "median_ms": 7.2847, "p20_ms": 7.281, "p80_ms": 7.2884, "temp_mb": 58.83, "cos_vs_bf16": 0.9999554, "max_abs_vs_bf16": 0.00102, "cos_vs_exact": 0.9999948, "max_abs_vs_exact": 0.00033, "cuda_graph": false}
+{"shape": "late-chunk", "batch": 1, "prefix": 14336, "extend": 2048, "impl": "int8-fused-regular", "median_ms": 14.8204, "p20_ms": 14.7988, "p80_ms": 14.8408, "temp_mb": 0.0, "cos_vs_bf16": 0.9999587, "max_abs_vs_bf16": 0.00102, "cos_vs_exact": 0.9999985, "max_abs_vs_exact": 0.00024, "cuda_graph": true}
+{"shape": "late-chunk", "batch": 1, "prefix": 14336, "extend": 2048, "impl": "int8-fused-unified", "median_ms": 48.1265, "p20_ms": 47.9283, "p80_ms": 48.2912, "temp_mb": 0.0, "cos_vs_bf16": 0.9999561, "max_abs_vs_bf16": 0.00102, "cos_vs_exact": 0.9999986, "max_abs_vs_exact": 0.00024, "cuda_graph": true}
+{"shape": "fresh-prefill", "batch": 4, "prefix": 0, "extend": 4096, "impl": "bf16-regular", "median_ms": 6.2198, "p20_ms": 6.1829, "p80_ms": 6.3285, "temp_mb": 0.0, "cos_vs_bf16": 0.999998, "max_abs_vs_bf16": 0.00957, "cos_vs_exact": 0.999998, "max_abs_vs_exact": 0.00957, "cuda_graph": true}
+{"shape": "fresh-prefill", "batch": 4, "prefix": 0, "extend": 4096, "impl": "bf16-unified", "median_ms": 14.2971, "p20_ms": 14.295, "p80_ms": 14.3022, "temp_mb": 0.0, "cos_vs_bf16": 0.999998, "max_abs_vs_bf16": 0.00957, "cos_vs_exact": 0.999998, "max_abs_vs_exact": 0.00957, "cuda_graph": true}
+{"shape": "fresh-prefill", "batch": 4, "prefix": 0, "extend": 4096, "impl": "int8-m3b-gather", "median_ms": 6.2167, "p20_ms": 6.187, "p80_ms": 6.2218, "temp_mb": 0.0, "cos_vs_bf16": 0.999998, "max_abs_vs_bf16": 0.00957, "cos_vs_exact": 0.999998, "max_abs_vs_exact": 0.00957, "cuda_graph": false}
+{"shape": "fresh-prefill", "batch": 4, "prefix": 0, "extend": 4096, "impl": "int8-fused-regular", "median_ms": 6.2024, "p20_ms": 6.2003, "p80_ms": 6.2982, "temp_mb": 0.0, "cos_vs_bf16": 0.999998, "max_abs_vs_bf16": 0.00957, "cos_vs_exact": 0.999998, "max_abs_vs_exact": 0.00957, "cuda_graph": true}
+{"shape": "fresh-prefill", "batch": 4, "prefix": 0, "extend": 4096, "impl": "int8-fused-unified", "median_ms": 53.0227, "p20_ms": 52.9818, "p80_ms": 53.0723, "temp_mb": 0.0, "cos_vs_bf16": 0.9999608, "max_abs_vs_bf16": 0.02759, "cos_vs_exact": 0.9999987, "max_abs_vs_exact": 0.00857, "cuda_graph": true}
+
+# M3c Extend Kernel & KL Consistency Summary
+
+## Kernel Microbenchmark (cold L2, 32 Q / 8 KV / D=128)
+
+| Shape (B × prefix + extend) | Impl | Median ms | vs BF16 | vs M3b | Temp MB | Cos vs BF16 | Max abs vs exact |
+|---|---|---:|---:|---:|---:|---:|---:|
+| prefix-hit (4×8192+512) | `bf16-regular` | 4.043 | 1.00× | 1.04× | 0.0 | 0.999997 | 0.00033 |
+| prefix-hit (4×8192+512) | `bf16-unified` | 3.969 | 1.02× | 1.06× | 0.0 | 0.999997 | 0.00033 |
+| prefix-hit (4×8192+512) | `int8-m3b-gather` | 4.188 | 0.97× | 1.00× | 134.5 | 0.999953 | 0.00062 |
+| prefix-hit (4×8192+512) | `int8-fused-regular` | 8.372 | 0.48× | 0.50× | 0.0 | 0.999957 | 0.00035 |
+| prefix-hit (4×8192+512) | `int8-fused-unified` | 26.756 | 0.15× | 0.16× | 0.0 | 0.999956 | 0.00037 |
+| late-chunk (1×14336+2048) | `bf16-regular` | 7.257 | 1.00× | 1.00× | 0.0 | 0.999997 | 0.00028 |
+| late-chunk (1×14336+2048) | `bf16-unified` | 7.625 | 0.95× | 0.96× | 0.0 | 0.999997 | 0.00028 |
+| late-chunk (1×14336+2048) | `int8-m3b-gather` | 7.285 | 1.00× | 1.00× | 58.8 | 0.999955 | 0.00033 |
+| late-chunk (1×14336+2048) | `int8-fused-regular` | 14.820 | 0.49× | 0.49× | 0.0 | 0.999959 | 0.00024 |
+| late-chunk (1×14336+2048) | `int8-fused-unified` | 48.127 | 0.15× | 0.15× | 0.0 | 0.999956 | 0.00024 |
+| fresh-prefill (4×0+4096) | `bf16-regular` | 6.220 | 1.00× | 1.00× | 0.0 | 0.999998 | 0.00957 |
+| fresh-prefill (4×0+4096) | `bf16-unified` | 14.297 | 0.44× | 0.43× | 0.0 | 0.999998 | 0.00957 |
+| fresh-prefill (4×0+4096) | `int8-m3b-gather` | 6.217 | 1.00× | 1.00× | 0.0 | 0.999998 | 0.00957 |
+| fresh-prefill (4×0+4096) | `int8-fused-regular` | 6.202 | 1.00× | 1.00× | 0.0 | 0.999998 | 0.00957 |
+| fresh-prefill (4×0+4096) | `int8-fused-unified` | 53.023 | 0.12× | 0.12× | 0.0 | 0.999961 | 0.00857 |
+
+
