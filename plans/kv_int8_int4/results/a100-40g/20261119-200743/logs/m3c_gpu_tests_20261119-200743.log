@@ -1,0 +1,153 @@
+.....................................................F.                  [100%]
+=================================== FAILURES ===================================
+___________ test_regular_and_unified_match_when_chunk_is_dequantized ___________
+
+    def test_regular_and_unified_match_when_chunk_is_dequantized():
+        """Passing dequantized chunk K/V to regular extend must match unified extend."""
+        b = _make_batch(
+            prefix_lens=[0, 53, 140],
+            extend_lens=[19, 97, 128],
+            num_q_heads=32,
+            num_kv_heads=8,
+            head_dim=128,
+            seed=13,
+        )
+        unified_kv_indptr, unified_kv_indices, prefix_lens = build_unified_kv_indices(
+            b["prefix_indptr"],
+            b["prefix_kv_indices"],
+            b["extend_start_loc"],
+            b["extend_seq_lens"],
+            b["extend_kv_indices"],
+            3,
+        )
+        k_ext_dq = _dequant_rows(b["k_cache"], b["k_scale"], b["extend_kv_indices"]).to(
+            torch.bfloat16
+        )
+        v_ext_dq = _dequant_rows(b["v_cache"], b["v_scale"], b["extend_kv_indices"]).to(
+            torch.bfloat16
+        )
+    
+        o_reg = torch.empty_like(b["q_extend"])
+        o_uni = torch.empty_like(b["q_extend"])
+        sm_scale = 128**-0.5
+    
+        extend_attention_fwd_int8(
+            q_extend=b["q_extend"],
+            k_extend=k_ext_dq,
+            v_extend=v_ext_dq,
+            o_extend=o_reg,
+            k_buffer=b["k_cache"],
+            v_buffer=b["v_cache"],
+            k_scale_buffer=b["k_scale"],
+            v_scale_buffer=b["v_scale"],
+            qo_indptr=b["qo_indptr"],
+            kv_indptr=b["prefix_indptr"],
+            kv_indices=b["prefix_kv_indices"],
+            custom_mask=None,
+            is_causal=True,
+            mask_indptr=None,
+            max_len_extend=128,
+            sm_scale=sm_scale,
+        )
+        extend_attention_fwd_unified_int8(
+            q=b["q_extend"],
+            o=o_uni,
+            k_buffer=b["k_cache"],
+            v_buffer=b["v_cache"],
+            k_scale_buffer=b["k_scale"],
+            v_scale_buffer=b["v_scale"],
+            qo_indptr=b["qo_indptr"],
+            kv_indptr=unified_kv_indptr,
+            kv_indices=unified_kv_indices,
+            prefix_lens=prefix_lens.to(torch.int32),
+            max_len_extend=128,
+            sm_scale=sm_scale,
+            is_causal=True,
+        )
+>       torch.testing.assert_close(o_reg.float(), o_uni.float(), atol=1e-2, rtol=2e-2)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 33 / 999424 (0.0%)
+E       Greatest absolute difference: 0.02734375 at index (1, 18, 55) (up to 0.01 allowed)
+E       Greatest relative difference: 1.8492462635040283 at index (5, 22, 70) (up to 0.02 allowed)
+
+test/registered/kernels/ops/attention/test_extend_attention_int8.py:422: AssertionError
+=============================== warnings summary ===============================
+../../envs/sglang/lib/python3.12/site-packages/_pytest/config/__init__.py:1636
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/_pytest/config/__init__.py:1636: PytestConfigWarning: Unknown config option: asyncio_mode
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/blackwell/blockscaled_contiguous_gather_grouped_gemm_act_fusion.py:3459
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/blackwell/blockscaled_contiguous_gather_grouped_gemm_act_fusion.py:3459: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/blackwell/moe_w4a16_kernel.py:2386
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/blackwell/moe_w4a16_kernel.py:2386: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:29
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:29: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    a_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:31
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:31: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    b_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:34
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:34: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/contiguous_grouped_gemm_finalize_fusion.py:968
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/contiguous_grouped_gemm_finalize_fusion.py:968: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    a_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/contiguous_grouped_gemm_finalize_fusion.py:970
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/contiguous_grouped_gemm_finalize_fusion.py:970: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    b_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_blackwell.py:427
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_blackwell.py:427: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    epi_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_blackwell.py:2391
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_blackwell.py:2391: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/cute_dsl/low_latency_blockscaled_gemm.py:102
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/cute_dsl/low_latency_blockscaled_gemm.py:102: DeprecationWarning: cutlass.utils.smem_allocator.get_smem_capacity_in_bytes is deprecated; use cutlass.memory.get_smem_capacity_in_bytes instead. It will be removed in a future release.
+    _SMEM_CAPACITY_BYTES = cutlass.utils.get_smem_capacity_in_bytes("sm_100")
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_rubin.py:218
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_rubin.py:218: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_chunked.py:95
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_chunked.py:95
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_chunked.py:95: DeprecationWarning: cutlass.utils.TensorMapUpdateMode is deprecated; use cutlass.tensor_utils.TensorMapUpdateMode instead. It will be removed in a future release.
+    from cutlass.utils import TensorMapManager, TensorMapUpdateMode
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/delta_rule_dsl/collective_store_tma.py:6
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/delta_rule_dsl/collective_store_tma.py:6: DeprecationWarning: cutlass.utils.tensormap_manager.TensorMapUpdateMode is deprecated; use cutlass.tensor_utils.TensorMapUpdateMode instead. It will be removed in a future release.
+    from cutlass.utils.tensormap_manager import TensorMapManager, TensorMapUpdateMode
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_cp_prefill.py:55
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_cp_prefill.py:55
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_cp_prefill.py:55: DeprecationWarning: cutlass.utils.TensorMapUpdateMode is deprecated; use cutlass.tensor_utils.TensorMapUpdateMode instead. It will be removed in a future release.
+    from cutlass.utils import TensorMapManager, TensorMapUpdateMode
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/cute_dsl/availability.py:136
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/cute_dsl/availability.py:136: DeprecationWarning: Arch from arch.py is deprecated. Use Arch from enums.py instead.
+    from cutlass.base_dsl.arch import Arch
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED test/registered/kernels/ops/attention/test_extend_attention_int8.py::test_regular_and_unified_match_when_chunk_is_dequantized
+1 failed, 54 passed, 20 warnings in 65.07s (0:01:05)
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute

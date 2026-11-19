@@ -1,0 +1,6 @@
+start=2026-11-19T20:09:50+08:00 commit=760986f3a92fb3054fae642a408bf8e16594503c
+cpu_exit=0
+gpu_exit=1
+attention_exit=1
+sections_2_4=skipped_gpu_tests
+experiments_end=2026-11-19T20:12:45+08:00

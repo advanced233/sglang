@@ -1,0 +1,230 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_________ TestTritonAttention.test_int8_per_token_head_attention_paths _________
+
+self = <test_triton_attention_kernels.TestTritonAttention testMethod=test_int8_per_token_head_attention_paths>
+
+    def test_int8_per_token_head_attention_paths(self):
+        """INT8 per-token-head fused paths: GQA decode, MHA decode, extend prefix, unified."""
+        if is_in_amd_ci() or not torch.cuda.is_available():
+            self.skipTest("INT8 per-token-head inline-asm path is CUDA-only")
+    
+        from sglang.kernels.ops.attention.decode_attention_int8 import (
+            decode_attention_fwd_int8,
+        )
+        from sglang.kernels.ops.attention.extend_attention_int8 import (
+            extend_attention_fwd_int8,
+            extend_attention_fwd_unified_int8,
+        )
+        from sglang.kernels.ops.kvcache.int8_per_token_head import (
+            store_int8_per_token_head_kv,
+        )
+    
+        device = get_device()
+        dtype = torch.bfloat16
+    
+        # 1. Decode: GQA grouped (32/8) and MHA (8/8)
+        for num_q_heads, num_kv_heads in ((32, 8), (8, 8)):
+            seq_lens = [17, 139]
+            total, batch, head_dim = sum(seq_lens), len(seq_lens), 128
+            k = 2 * torch.randn(
+                (total, num_kv_heads, head_dim), dtype=dtype, device=device
+            )
+            v = 2 * torch.randn(
+                (total, num_kv_heads, head_dim), dtype=dtype, device=device
+            )
+            q = torch.randn((batch, num_q_heads, head_dim), dtype=dtype, device=device)
+            slots = torch.randperm(total + 16, device=device)[:total] + 1
+            k_buf = torch.zeros(
+                (total + 17, num_kv_heads, head_dim), dtype=torch.int8, device=device
+            )
+            v_buf = torch.zeros_like(k_buf)
+            k_scale = torch.zeros(
+                (total + 17, num_kv_heads), dtype=torch.float32, device=device
+            )
+            v_scale = torch.zeros_like(k_scale)
+            store_int8_per_token_head_kv(
+                k=k,
+                v=v,
+                loc=slots,
+                k_cache=k_buf,
+                v_cache=v_buf,
+                k_scale=k_scale,
+                v_scale=v_scale,
+            )
+            kv_indptr = torch.tensor(
+                [0, seq_lens[0], total], dtype=torch.int32, device=device
+            )
+            o = torch.empty_like(q)
+            sm_scale = head_dim**-0.5
+            decode_attention_fwd_int8(
+                q=q,
+                k_buffer=k_buf,
+                v_buffer=v_buf,
+                k_scale_buffer=k_scale,
+                v_scale_buffer=v_scale,
+                o=o,
+                kv_indptr=kv_indptr,
+                kv_indices=slots.to(torch.int32),
+                attn_logits=torch.empty(
+                    (batch, num_q_heads, 4, head_dim),
+                    dtype=torch.float32,
+                    device=device,
+                ),
+                attn_lse=torch.empty(
+                    (batch, num_q_heads, 4), dtype=torch.float32, device=device
+                ),
+                num_kv_splits=torch.tensor([2, 4], dtype=torch.int32, device=device),
+                max_kv_splits=4,
+                sm_scale=sm_scale,
+            )
+            k_dq = (k_buf.float() * k_scale[:, :, None]).to(dtype)
+            v_dq = (v_buf.float() * v_scale[:, :, None]).to(dtype)
+            ref = decode_attention_fwd_torch(
+                q, k_dq, v_dq, kv_indptr, slots.to(torch.int32), sm_scale
+            )
+>           torch.testing.assert_close(o.float(), ref, atol=5e-3, rtol=1e-2)
+E           AssertionError: Tensor-likes are not close!
+E           
+E           Mismatched elements: 47 / 8192 (0.6%)
+E           Greatest absolute difference: 0.01490291953086853 at index (1, 6, 9) (up to 0.005 allowed)
+E           Greatest relative difference: 18.29080581665039 at index (0, 13, 84) (up to 0.01 allowed)
+
+test/registered/attention/test_triton_attention_kernels.py:1413: AssertionError
+
+During handling of the above exception, another exception occurred:
+python/sglang/test/test_utils.py:2452: in _callTestMethod
+    retry(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+fn = <function CustomTestCase._callTestMethod.<locals>.<lambda> at 0x7ff0cf0fbec0>
+max_retry = 0, initial_delay = 2.0, max_delay = 60.0
+should_retry = <function <lambda> at 0x7ff111ea8220>
+
+    def retry(
+        fn,
+        max_retry: int,
+        initial_delay: float = 2.0,
+        max_delay: float = 60.0,
+        should_retry: Callable[[Any], bool] = lambda e: True,
+    ):
+        for try_index in itertools.count():
+            try:
+                return fn()
+            except SkipTest:
+                # Do NOT retry skipped tests - used in CI and unittest
+                raise
+            except _ShouldStop:
+                # `unittest.case._ShouldStop` is raised by `subTest.__exit__`
+                # when a subtest fails/skips and `result.failfast` is True
+                # (CI invokes `python3 file.py -f`). It signals the outer
+                # `testPartExecutor` to stop the test method cleanly; do
+                # NOT retry, just propagate so unittest handles it.
+                raise
+            except Exception as e:
+                traceback.print_exc()
+    
+                if try_index >= max_retry:
+>                   raise Exception(f"retry() exceed maximum number of retries.")
+E                   Exception: retry() exceed maximum number of retries.
+
+python/sglang/srt/utils/common.py:3802: Exception
+----------------------------- Captured stderr call -----------------------------
+Traceback (most recent call last):
+  File "$KVQ_WORK/src/sglang/python/sglang/srt/utils/common.py", line 3787, in retry
+    return fn()
+           ^^^^
+  File "$KVQ_WORK/src/sglang/python/sglang/test/test_utils.py", line 2453, in <lambda>
+    lambda: super(CustomTestCase, self)._callTestMethod(method),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/unittest/case.py", line 589, in _callTestMethod
+    if method() is not None:
+       ^^^^^^^^
+  File "$KVQ_WORK/src/sglang/test/registered/attention/test_triton_attention_kernels.py", line 1413, in test_int8_per_token_head_attention_paths
+    torch.testing.assert_close(o.float(), ref, atol=5e-3, rtol=1e-2)
+  File "$KVQ_WORK/envs/sglang/lib/python3.12/site-packages/torch/testing/_comparison.py", line 1689, in assert_close
+    raise error_metas[0].to_error(msg)
+AssertionError: Tensor-likes are not close!
+
+Mismatched elements: 47 / 8192 (0.6%)
+Greatest absolute difference: 0.01490291953086853 at index (1, 6, 9) (up to 0.005 allowed)
+Greatest relative difference: 18.29080581665039 at index (0, 13, 84) (up to 0.01 allowed)
+=============================== warnings summary ===============================
+../../envs/sglang/lib/python3.12/site-packages/_pytest/config/__init__.py:1636
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/_pytest/config/__init__.py:1636: PytestConfigWarning: Unknown config option: asyncio_mode
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/blackwell/blockscaled_contiguous_gather_grouped_gemm_act_fusion.py:3459
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/blackwell/blockscaled_contiguous_gather_grouped_gemm_act_fusion.py:3459: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/blackwell/moe_w4a16_kernel.py:2386
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/blackwell/moe_w4a16_kernel.py:2386: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:29
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:29: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    a_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:31
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:31: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    b_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:34
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:34: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/contiguous_grouped_gemm_finalize_fusion.py:968
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/contiguous_grouped_gemm_finalize_fusion.py:968: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    a_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/contiguous_grouped_gemm_finalize_fusion.py:970
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/contiguous_grouped_gemm_finalize_fusion.py:970: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    b_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_blackwell.py:427
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_blackwell.py:427: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    epi_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_blackwell.py:2391
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_blackwell.py:2391: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/cute_dsl/low_latency_blockscaled_gemm.py:102
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/cute_dsl/low_latency_blockscaled_gemm.py:102: DeprecationWarning: cutlass.utils.smem_allocator.get_smem_capacity_in_bytes is deprecated; use cutlass.memory.get_smem_capacity_in_bytes instead. It will be removed in a future release.
+    _SMEM_CAPACITY_BYTES = cutlass.utils.get_smem_capacity_in_bytes("sm_100")
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_rubin.py:218
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_rubin.py:218: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_chunked.py:95
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_chunked.py:95
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_chunked.py:95: DeprecationWarning: cutlass.utils.TensorMapUpdateMode is deprecated; use cutlass.tensor_utils.TensorMapUpdateMode instead. It will be removed in a future release.
+    from cutlass.utils import TensorMapManager, TensorMapUpdateMode
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/delta_rule_dsl/collective_store_tma.py:6
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/delta_rule_dsl/collective_store_tma.py:6: DeprecationWarning: cutlass.utils.tensormap_manager.TensorMapUpdateMode is deprecated; use cutlass.tensor_utils.TensorMapUpdateMode instead. It will be removed in a future release.
+    from cutlass.utils.tensormap_manager import TensorMapManager, TensorMapUpdateMode
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_cp_prefill.py:55
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_cp_prefill.py:55
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_cp_prefill.py:55: DeprecationWarning: cutlass.utils.TensorMapUpdateMode is deprecated; use cutlass.tensor_utils.TensorMapUpdateMode instead. It will be removed in a future release.
+    from cutlass.utils import TensorMapManager, TensorMapUpdateMode
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/cute_dsl/availability.py:136
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/cute_dsl/availability.py:136: DeprecationWarning: Arch from arch.py is deprecated. Use Arch from enums.py instead.
+    from cutlass.base_dsl.arch import Arch
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED test/registered/attention/test_triton_attention_kernels.py::TestTritonAttention::test_int8_per_token_head_attention_paths
+1 failed, 15 deselected, 20 warnings in 12.92s
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
