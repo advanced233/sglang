@@ -1,0 +1,26 @@
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (1183421 > 131072). Running this sequence through the model will result in indexing errors
+Loaded 32 prompts of 1024 tokens from 203 files (1183421 tokens).
+{"kind": "server", "config": "int8-det", "ready": true, "ready_s": 60.0, "extra_args": ["--attention-backend", "triton", "--kv-cache-dtype", "int8_per_token_head", "--sampling-backend", "pytorch", "--enable-deterministic-inference"], "extra_env": {}, "capacity_tokens": 235787, "default_backend": null, "mem_fraction_static": 0.823, "decode_graph_max_bs": 32, "error_tail": null}
+{"kind": "kl", "config": "int8-det", "check": "match", "hit_samples": 32, "total_samples": 32, "gen_s": 22.56, "prefill_s": 6.0, "samples": 32, "tokens": 16384, "avg_kl_div": 0.0001643995746377383, "p99_kl": 0.0028286313035571224, "max_kl": 0.40516721702819236, "max_abs_logp_diff": 1.0580272674560547, "frac_kl_gt_1e4": 0.09588623046875, "frac_kl_gt_1e2": 0.00140380859375}
+{"kind": "kl", "config": "int8-det", "check": "prefill_cache_hit", "hit_samples": 32, "total_samples": 32, "gen_s": 19.24, "prefill_s": 6.07, "samples": 32, "tokens": 16384, "avg_kl_div": 0.0001643995746377383, "p99_kl": 0.0028286313035571224, "max_kl": 0.40516721702819236, "max_abs_logp_diff": 1.0580272674560547, "frac_kl_gt_1e4": 0.09588623046875, "frac_kl_gt_1e2": 0.00140380859375}
+{"kind": "kl", "config": "int8-det", "check": "decode_cache_hit", "hit_samples": 32, "total_samples": 32, "gen_s": 20.09, "prefill_s": 8.41, "samples": 32, "tokens": 16384, "avg_kl_div": 0.00045831242955524717, "p99_kl": 0.002084937029743348, "max_kl": 4.046781411505912, "max_abs_logp_diff": 5.04030966758728, "frac_kl_gt_1e4": 0.0589599609375, "frac_kl_gt_1e2": 0.00091552734375}
+{"kind": "kl", "config": "int8-det", "check": "prefill_cached_vs_fresh", "hit_samples": 32, "total_samples": 32, "gen_s": 2.08, "prefill_s": 3.86, "samples": 32, "tokens": 16352, "avg_kl_div": 0.0002186362958751363, "p99_kl": 0.0018415782527798907, "max_kl": 1.980988557206686, "max_abs_logp_diff": 1.4997987747192383, "frac_kl_gt_1e4": 0.020731409001956948, "frac_kl_gt_1e2": 0.0017734833659491193}
+
+# M3c Extend Kernel & KL Consistency Summary
+
+## Server Startup & KV Capacity
+
+| Config | Ready | Ready s | KV Capacity (tokens) | mem_frac |
+|---|---:|---:|---:|---:|
+| `int8-det` | True | 60.0 | 235787 | 0.823 |
+
+## Offline KL Consistency Checks
+
+| Config | Check | Hits | Avg KL | p99 KL | Max KL | Max |Δlogp| | >1e-4 | >1e-2 |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `int8-det` | `match` | 32/32 | 1.644e-04 | 0.002829 | 0.405167 | 1.058027 | 9.59% | 0.14% |
+| `int8-det` | `prefill_cache_hit` | 32/32 | 1.644e-04 | 0.002829 | 0.405167 | 1.058027 | 9.59% | 0.14% |
+| `int8-det` | `decode_cache_hit` | 32/32 | 4.583e-04 | 0.002085 | 4.046781 | 5.040310 | 5.90% | 0.09% |
+| `int8-det` | `prefill_cached_vs_fresh` | 32/32 | 2.186e-04 | 0.001842 | 1.980989 | 1.499799 | 2.07% | 0.18% |
+
+
