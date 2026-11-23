@@ -1,0 +1,5 @@
+==PROF== Connected to process 888498 ($KVQ_WORK/envs/sglang/bin/python3.12)
+==PROF== Profiling "_fwd_grouped_kernel_stage1_in..." - 0: 0%....50%....100% - 47 passes
+==PROF== Profiling "_fwd_kernel_stage2" - 1: 0%....50%....100% - 47 passes
+==PROF== Disconnected from process 888498
+==PROF== Report: $KVQ_WORK/outputs/decode-ablation/20261123-115120/naive_fused.ncu-rep
