@@ -1,0 +1,889 @@
+.F.F.F.................................................................. [ 58%]
+.......FF..FF..........................FF..FF......                      [100%]
+=================================== FAILURES ===================================
+_____________ test_store_scatters_and_matches_reference[64-norht] ______________
+
+head_dim = 64, use_rht = False
+
+    @pytest.mark.parametrize("use_rht", [True, False], ids=["rht", "norht"])
+    @pytest.mark.parametrize("head_dim", [64, 128, 96])
+    def test_store_scatters_and_matches_reference(head_dim, use_rht):
+        """Written rows match vLLM/kvq_ref arithmetic byte-for-byte; untouched slots stay zero.
+    
+        K and V come from one fused QKV tensor, exercising non-contiguous token strides.
+        """
+        torch.manual_seed(0)
+        tokens, heads, slots = 37, 4, 256
+        qkv = 3 * torch.randn(
+            (tokens, 3 * heads, head_dim), dtype=torch.bfloat16, device=DEVICE
+        )
+        k, v = qkv[:, heads : 2 * heads], qkv[:, 2 * heads :]
+        loc = torch.randperm(slots, device=DEVICE)[:tokens]
+        k_cache, k_scale = _empty_cache(slots, heads, head_dim)
+        v_cache, v_scale = _empty_cache(slots, heads, head_dim)
+    
+        store_int4_per_token_head_kv(
+            k=k,
+            v=v,
+            loc=loc,
+            k_cache=k_cache,
+            v_cache=v_cache,
+            k_scale=k_scale,
+            v_scale=v_scale,
+            use_rht=use_rht,
+        )
+    
+        untouched = torch.ones(slots, dtype=torch.bool, device=DEVICE)
+        untouched[loc] = False
+        for x, data, scale in ((k, k_cache, k_scale), (v, v_cache, v_scale)):
+            ref_packed, ref_scale = _ref_quantize_int4(x, use_rht=use_rht)
+            if not use_rht:
+>               assert torch.equal(data[loc], ref_packed)
+E               AssertionError: assert False
+E                +  where False = <built-in method equal of type object at 0x7f95eb28c640>(tensor([[[184,  86, 195,  ...,  75, 231,  68],\n         [172, 152, 102,  ...,  97, 131, 104],\n         [136,  85, 119,... 205,  ...,  40,   5, 148],\n         [167, 205, 139,  ..., 171, 203, 160]]], device='cuda:0',\n       dtype=torch.uint8), tensor([[[184,  86, 195,  ...,  75, 231,  68],\n         [172, 152, 102,  ...,  97, 131, 104],\n         [136,  85, 119,... 205,  ...,  40,   5, 148],\n         [167, 205, 139,  ..., 171, 203, 160]]], device='cuda:0',\n       dtype=torch.uint8))
+E                +    where <built-in method equal of type object at 0x7f95eb28c640> = torch.equal
+
+test/registered/kernels/ops/kvcache/test_int4_per_token_head.py:82: AssertionError
+_____________ test_store_scatters_and_matches_reference[128-norht] _____________
+
+head_dim = 128, use_rht = False
+
+    @pytest.mark.parametrize("use_rht", [True, False], ids=["rht", "norht"])
+    @pytest.mark.parametrize("head_dim", [64, 128, 96])
+    def test_store_scatters_and_matches_reference(head_dim, use_rht):
+        """Written rows match vLLM/kvq_ref arithmetic byte-for-byte; untouched slots stay zero.
+    
+        K and V come from one fused QKV tensor, exercising non-contiguous token strides.
+        """
+        torch.manual_seed(0)
+        tokens, heads, slots = 37, 4, 256
+        qkv = 3 * torch.randn(
+            (tokens, 3 * heads, head_dim), dtype=torch.bfloat16, device=DEVICE
+        )
+        k, v = qkv[:, heads : 2 * heads], qkv[:, 2 * heads :]
+        loc = torch.randperm(slots, device=DEVICE)[:tokens]
+        k_cache, k_scale = _empty_cache(slots, heads, head_dim)
+        v_cache, v_scale = _empty_cache(slots, heads, head_dim)
+    
+        store_int4_per_token_head_kv(
+            k=k,
+            v=v,
+            loc=loc,
+            k_cache=k_cache,
+            v_cache=v_cache,
+            k_scale=k_scale,
+            v_scale=v_scale,
+            use_rht=use_rht,
+        )
+    
+        untouched = torch.ones(slots, dtype=torch.bool, device=DEVICE)
+        untouched[loc] = False
+        for x, data, scale in ((k, k_cache, k_scale), (v, v_cache, v_scale)):
+            ref_packed, ref_scale = _ref_quantize_int4(x, use_rht=use_rht)
+            if not use_rht:
+>               assert torch.equal(data[loc], ref_packed)
+E               AssertionError: assert False
+E                +  where False = <built-in method equal of type object at 0x7f95eb28c640>(tensor([[[100, 154,  68,  ..., 102,  99, 155],\n         [173,  72, 135,  ..., 173,  72, 133],\n         [118, 168, 156,... 231,  ...,  99, 119, 185],\n         [134, 151, 136,  ..., 185, 157, 189]]], device='cuda:0',\n       dtype=torch.uint8), tensor([[[100, 154,  68,  ..., 102,  99, 155],\n         [173,  72, 135,  ..., 173,  72, 133],\n         [118, 168, 156,... 231,  ...,  99, 119, 185],\n         [134, 151, 136,  ..., 185, 157, 189]]], device='cuda:0',\n       dtype=torch.uint8))
+E                +    where <built-in method equal of type object at 0x7f95eb28c640> = torch.equal
+
+test/registered/kernels/ops/kvcache/test_int4_per_token_head.py:82: AssertionError
+_____________ test_store_scatters_and_matches_reference[96-norht] ______________
+
+head_dim = 96, use_rht = False
+
+    @pytest.mark.parametrize("use_rht", [True, False], ids=["rht", "norht"])
+    @pytest.mark.parametrize("head_dim", [64, 128, 96])
+    def test_store_scatters_and_matches_reference(head_dim, use_rht):
+        """Written rows match vLLM/kvq_ref arithmetic byte-for-byte; untouched slots stay zero.
+    
+        K and V come from one fused QKV tensor, exercising non-contiguous token strides.
+        """
+        torch.manual_seed(0)
+        tokens, heads, slots = 37, 4, 256
+        qkv = 3 * torch.randn(
+            (tokens, 3 * heads, head_dim), dtype=torch.bfloat16, device=DEVICE
+        )
+        k, v = qkv[:, heads : 2 * heads], qkv[:, 2 * heads :]
+        loc = torch.randperm(slots, device=DEVICE)[:tokens]
+        k_cache, k_scale = _empty_cache(slots, heads, head_dim)
+        v_cache, v_scale = _empty_cache(slots, heads, head_dim)
+    
+        store_int4_per_token_head_kv(
+            k=k,
+            v=v,
+            loc=loc,
+            k_cache=k_cache,
+            v_cache=v_cache,
+            k_scale=k_scale,
+            v_scale=v_scale,
+            use_rht=use_rht,
+        )
+    
+        untouched = torch.ones(slots, dtype=torch.bool, device=DEVICE)
+        untouched[loc] = False
+        for x, data, scale in ((k, k_cache, k_scale), (v, v_cache, v_scale)):
+            ref_packed, ref_scale = _ref_quantize_int4(x, use_rht=use_rht)
+            if not use_rht:
+>               assert torch.equal(data[loc], ref_packed)
+E               AssertionError: assert False
+E                +  where False = <built-in method equal of type object at 0x7f95eb28c640>(tensor([[[136,  85, 119,  ..., 125,  74, 186],\n         [136,  38, 135,  ...,  89, 102,  73],\n         [ 53,  39, 138,... 102,  ..., 102,  45, 197],\n         [205, 108, 103,  ..., 115, 185, 250]]], device='cuda:0',\n       dtype=torch.uint8), tensor([[[136,  85, 119,  ..., 125,  74, 186],\n         [136,  38, 135,  ...,  89, 102,  73],\n         [ 53,  39, 138,... 102,  ..., 102,  45, 197],\n         [205, 108, 103,  ..., 115, 185, 250]]], device='cuda:0',\n       dtype=torch.uint8))
+E                +    where <built-in method equal of type object at 0x7f95eb28c640> = torch.equal
+
+test/registered/kernels/ops/kvcache/test_int4_per_token_head.py:82: AssertionError
+_______ test_regular_extend_matches_reference[gqa4_d96-causal-rht-magic] _______
+
+convert = 'magic', use_rht = True, is_causal = True, num_q_heads = 8
+num_kv_heads = 2, head_dim = 96, logit_cap = 0.0
+
+    @pytest.mark.parametrize("convert", CONVERSIONS)
+    @pytest.mark.parametrize("use_rht", [True, False], ids=["rht", "norht"])
+    @pytest.mark.parametrize("is_causal", [True, False], ids=["causal", "noncausal"])
+    @pytest.mark.parametrize(
+        "num_q_heads,num_kv_heads,head_dim,logit_cap",
+        [
+            (32, 8, 128, 0.0),
+            (16, 2, 64, 0.0),
+            (8, 8, 128, 30.0),
+            (8, 2, 96, 0.0),
+        ],
+        ids=["gqa4_d128", "gqa8_d64", "mha_logit_cap", "gqa4_d96"],
+    )
+    def test_regular_extend_matches_reference(
+        convert, use_rht, is_causal, num_q_heads, num_kv_heads, head_dim, logit_cap
+    ):
+        b = _make_batch(
+            prefix_lens=PREFIX_LENS,
+            extend_lens=EXTEND_LENS,
+            num_q_heads=num_q_heads,
+            num_kv_heads=num_kv_heads,
+            head_dim=head_dim,
+            use_rht=use_rht,
+        )
+        o = torch.empty_like(b["q_extend"])
+        sm_scale = head_dim**-0.5
+    
+        extend_attention_fwd_int4(
+            q_extend=b["q_extend"],
+            k_extend=b["k_extend"],
+            v_extend=b["v_extend"],
+            o_extend=o,
+            k_buffer=b["k_cache"],
+            v_buffer=b["v_cache"],
+            k_scale_buffer=b["k_scale"],
+            v_scale_buffer=b["v_scale"],
+            qo_indptr=b["qo_indptr"],
+            kv_indptr=b["prefix_indptr"],
+            kv_indices=b["prefix_kv_indices"],
+            custom_mask=None,
+            is_causal=is_causal,
+            mask_indptr=None,
+            max_len_extend=max(EXTEND_LENS),
+            sm_scale=sm_scale,
+            logit_cap=logit_cap,
+            use_rht=use_rht,
+            convert=convert,
+        )
+    
+        ref = _reference_extend(
+            q_extend=b["q_extend"],
+            k_prefix_list=[
+                _dequant_rows(b["k_cache"], b["k_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            v_prefix_list=[
+                _dequant_rows(b["v_cache"], b["v_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            k_chunk_list=[x.float() for x in b["k_ext_chunks"]],
+            v_chunk_list=[x.float() for x in b["v_ext_chunks"]],
+            sm_scale=sm_scale,
+            is_causal=is_causal,
+            logit_cap=logit_cap,
+        )
+>       torch.testing.assert_close(o.float(), ref, atol=8e-3, rtol=1.5e-2)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 108 / 274176 (0.0%)
+E       Greatest absolute difference: 0.022231996059417725 at index (275, 7, 2) (up to 0.008 allowed)
+E       Greatest relative difference: 18.97519302368164 at index (106, 4, 55) (up to 0.015 allowed)
+
+test/registered/kernels/ops/attention/test_extend_attention_int4.py:260: AssertionError
+_______ test_regular_extend_matches_reference[gqa4_d96-causal-rht-cast] ________
+
+convert = 'cast', use_rht = True, is_causal = True, num_q_heads = 8
+num_kv_heads = 2, head_dim = 96, logit_cap = 0.0
+
+    @pytest.mark.parametrize("convert", CONVERSIONS)
+    @pytest.mark.parametrize("use_rht", [True, False], ids=["rht", "norht"])
+    @pytest.mark.parametrize("is_causal", [True, False], ids=["causal", "noncausal"])
+    @pytest.mark.parametrize(
+        "num_q_heads,num_kv_heads,head_dim,logit_cap",
+        [
+            (32, 8, 128, 0.0),
+            (16, 2, 64, 0.0),
+            (8, 8, 128, 30.0),
+            (8, 2, 96, 0.0),
+        ],
+        ids=["gqa4_d128", "gqa8_d64", "mha_logit_cap", "gqa4_d96"],
+    )
+    def test_regular_extend_matches_reference(
+        convert, use_rht, is_causal, num_q_heads, num_kv_heads, head_dim, logit_cap
+    ):
+        b = _make_batch(
+            prefix_lens=PREFIX_LENS,
+            extend_lens=EXTEND_LENS,
+            num_q_heads=num_q_heads,
+            num_kv_heads=num_kv_heads,
+            head_dim=head_dim,
+            use_rht=use_rht,
+        )
+        o = torch.empty_like(b["q_extend"])
+        sm_scale = head_dim**-0.5
+    
+        extend_attention_fwd_int4(
+            q_extend=b["q_extend"],
+            k_extend=b["k_extend"],
+            v_extend=b["v_extend"],
+            o_extend=o,
+            k_buffer=b["k_cache"],
+            v_buffer=b["v_cache"],
+            k_scale_buffer=b["k_scale"],
+            v_scale_buffer=b["v_scale"],
+            qo_indptr=b["qo_indptr"],
+            kv_indptr=b["prefix_indptr"],
+            kv_indices=b["prefix_kv_indices"],
+            custom_mask=None,
+            is_causal=is_causal,
+            mask_indptr=None,
+            max_len_extend=max(EXTEND_LENS),
+            sm_scale=sm_scale,
+            logit_cap=logit_cap,
+            use_rht=use_rht,
+            convert=convert,
+        )
+    
+        ref = _reference_extend(
+            q_extend=b["q_extend"],
+            k_prefix_list=[
+                _dequant_rows(b["k_cache"], b["k_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            v_prefix_list=[
+                _dequant_rows(b["v_cache"], b["v_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            k_chunk_list=[x.float() for x in b["k_ext_chunks"]],
+            v_chunk_list=[x.float() for x in b["v_ext_chunks"]],
+            sm_scale=sm_scale,
+            is_causal=is_causal,
+            logit_cap=logit_cap,
+        )
+>       torch.testing.assert_close(o.float(), ref, atol=8e-3, rtol=1.5e-2)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 108 / 274176 (0.0%)
+E       Greatest absolute difference: 0.022231996059417725 at index (275, 7, 2) (up to 0.008 allowed)
+E       Greatest relative difference: 18.97519302368164 at index (106, 4, 55) (up to 0.015 allowed)
+
+test/registered/kernels/ops/attention/test_extend_attention_int4.py:260: AssertionError
+_____ test_regular_extend_matches_reference[gqa4_d96-noncausal-rht-magic] ______
+
+convert = 'magic', use_rht = True, is_causal = False, num_q_heads = 8
+num_kv_heads = 2, head_dim = 96, logit_cap = 0.0
+
+    @pytest.mark.parametrize("convert", CONVERSIONS)
+    @pytest.mark.parametrize("use_rht", [True, False], ids=["rht", "norht"])
+    @pytest.mark.parametrize("is_causal", [True, False], ids=["causal", "noncausal"])
+    @pytest.mark.parametrize(
+        "num_q_heads,num_kv_heads,head_dim,logit_cap",
+        [
+            (32, 8, 128, 0.0),
+            (16, 2, 64, 0.0),
+            (8, 8, 128, 30.0),
+            (8, 2, 96, 0.0),
+        ],
+        ids=["gqa4_d128", "gqa8_d64", "mha_logit_cap", "gqa4_d96"],
+    )
+    def test_regular_extend_matches_reference(
+        convert, use_rht, is_causal, num_q_heads, num_kv_heads, head_dim, logit_cap
+    ):
+        b = _make_batch(
+            prefix_lens=PREFIX_LENS,
+            extend_lens=EXTEND_LENS,
+            num_q_heads=num_q_heads,
+            num_kv_heads=num_kv_heads,
+            head_dim=head_dim,
+            use_rht=use_rht,
+        )
+        o = torch.empty_like(b["q_extend"])
+        sm_scale = head_dim**-0.5
+    
+        extend_attention_fwd_int4(
+            q_extend=b["q_extend"],
+            k_extend=b["k_extend"],
+            v_extend=b["v_extend"],
+            o_extend=o,
+            k_buffer=b["k_cache"],
+            v_buffer=b["v_cache"],
+            k_scale_buffer=b["k_scale"],
+            v_scale_buffer=b["v_scale"],
+            qo_indptr=b["qo_indptr"],
+            kv_indptr=b["prefix_indptr"],
+            kv_indices=b["prefix_kv_indices"],
+            custom_mask=None,
+            is_causal=is_causal,
+            mask_indptr=None,
+            max_len_extend=max(EXTEND_LENS),
+            sm_scale=sm_scale,
+            logit_cap=logit_cap,
+            use_rht=use_rht,
+            convert=convert,
+        )
+    
+        ref = _reference_extend(
+            q_extend=b["q_extend"],
+            k_prefix_list=[
+                _dequant_rows(b["k_cache"], b["k_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            v_prefix_list=[
+                _dequant_rows(b["v_cache"], b["v_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            k_chunk_list=[x.float() for x in b["k_ext_chunks"]],
+            v_chunk_list=[x.float() for x in b["v_ext_chunks"]],
+            sm_scale=sm_scale,
+            is_causal=is_causal,
+            logit_cap=logit_cap,
+        )
+>       torch.testing.assert_close(o.float(), ref, atol=8e-3, rtol=1.5e-2)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 102 / 274176 (0.0%)
+E       Greatest absolute difference: 0.025456786155700684 at index (27, 4, 36) (up to 0.008 allowed)
+E       Greatest relative difference: 6.482180595397949 at index (75, 3, 74) (up to 0.015 allowed)
+
+test/registered/kernels/ops/attention/test_extend_attention_int4.py:260: AssertionError
+______ test_regular_extend_matches_reference[gqa4_d96-noncausal-rht-cast] ______
+
+convert = 'cast', use_rht = True, is_causal = False, num_q_heads = 8
+num_kv_heads = 2, head_dim = 96, logit_cap = 0.0
+
+    @pytest.mark.parametrize("convert", CONVERSIONS)
+    @pytest.mark.parametrize("use_rht", [True, False], ids=["rht", "norht"])
+    @pytest.mark.parametrize("is_causal", [True, False], ids=["causal", "noncausal"])
+    @pytest.mark.parametrize(
+        "num_q_heads,num_kv_heads,head_dim,logit_cap",
+        [
+            (32, 8, 128, 0.0),
+            (16, 2, 64, 0.0),
+            (8, 8, 128, 30.0),
+            (8, 2, 96, 0.0),
+        ],
+        ids=["gqa4_d128", "gqa8_d64", "mha_logit_cap", "gqa4_d96"],
+    )
+    def test_regular_extend_matches_reference(
+        convert, use_rht, is_causal, num_q_heads, num_kv_heads, head_dim, logit_cap
+    ):
+        b = _make_batch(
+            prefix_lens=PREFIX_LENS,
+            extend_lens=EXTEND_LENS,
+            num_q_heads=num_q_heads,
+            num_kv_heads=num_kv_heads,
+            head_dim=head_dim,
+            use_rht=use_rht,
+        )
+        o = torch.empty_like(b["q_extend"])
+        sm_scale = head_dim**-0.5
+    
+        extend_attention_fwd_int4(
+            q_extend=b["q_extend"],
+            k_extend=b["k_extend"],
+            v_extend=b["v_extend"],
+            o_extend=o,
+            k_buffer=b["k_cache"],
+            v_buffer=b["v_cache"],
+            k_scale_buffer=b["k_scale"],
+            v_scale_buffer=b["v_scale"],
+            qo_indptr=b["qo_indptr"],
+            kv_indptr=b["prefix_indptr"],
+            kv_indices=b["prefix_kv_indices"],
+            custom_mask=None,
+            is_causal=is_causal,
+            mask_indptr=None,
+            max_len_extend=max(EXTEND_LENS),
+            sm_scale=sm_scale,
+            logit_cap=logit_cap,
+            use_rht=use_rht,
+            convert=convert,
+        )
+    
+        ref = _reference_extend(
+            q_extend=b["q_extend"],
+            k_prefix_list=[
+                _dequant_rows(b["k_cache"], b["k_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            v_prefix_list=[
+                _dequant_rows(b["v_cache"], b["v_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            k_chunk_list=[x.float() for x in b["k_ext_chunks"]],
+            v_chunk_list=[x.float() for x in b["v_ext_chunks"]],
+            sm_scale=sm_scale,
+            is_causal=is_causal,
+            logit_cap=logit_cap,
+        )
+>       torch.testing.assert_close(o.float(), ref, atol=8e-3, rtol=1.5e-2)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 102 / 274176 (0.0%)
+E       Greatest absolute difference: 0.025456786155700684 at index (27, 4, 36) (up to 0.008 allowed)
+E       Greatest relative difference: 6.482180595397949 at index (75, 3, 74) (up to 0.015 allowed)
+
+test/registered/kernels/ops/attention/test_extend_attention_int4.py:260: AssertionError
+_______ test_unified_extend_matches_reference[gqa4_d96-causal-rht-magic] _______
+
+convert = 'magic', use_rht = True, is_causal = True, num_q_heads = 8
+num_kv_heads = 2, head_dim = 96, logit_cap = 0.0
+
+    @pytest.mark.parametrize("convert", CONVERSIONS)
+    @pytest.mark.parametrize("use_rht", [True, False], ids=["rht", "norht"])
+    @pytest.mark.parametrize("is_causal", [True, False], ids=["causal", "noncausal"])
+    @pytest.mark.parametrize(
+        "num_q_heads,num_kv_heads,head_dim,logit_cap",
+        [
+            (32, 8, 128, 0.0),
+            (16, 2, 64, 0.0),
+            (8, 8, 128, 30.0),
+            (8, 2, 96, 0.0),
+        ],
+        ids=["gqa4_d128", "gqa8_d64", "mha_logit_cap", "gqa4_d96"],
+    )
+    def test_unified_extend_matches_reference(
+        convert, use_rht, is_causal, num_q_heads, num_kv_heads, head_dim, logit_cap
+    ):
+        b = _make_batch(
+            prefix_lens=PREFIX_LENS,
+            extend_lens=EXTEND_LENS,
+            num_q_heads=num_q_heads,
+            num_kv_heads=num_kv_heads,
+            head_dim=head_dim,
+            use_rht=use_rht,
+        )
+        unified_kv_indptr, unified_kv_indices, prefix_lens = build_unified_kv_indices(
+            b["prefix_indptr"],
+            b["prefix_kv_indices"],
+            b["extend_start_loc"],
+            b["extend_seq_lens"],
+            b["extend_kv_indices"],
+            len(PREFIX_LENS),
+        )
+        o = torch.empty_like(b["q_extend"])
+        sm_scale = head_dim**-0.5
+    
+        extend_attention_fwd_unified_int4(
+            q=b["q_extend"],
+            o=o,
+            k_buffer=b["k_cache"],
+            v_buffer=b["v_cache"],
+            k_scale_buffer=b["k_scale"],
+            v_scale_buffer=b["v_scale"],
+            qo_indptr=b["qo_indptr"],
+            kv_indptr=unified_kv_indptr,
+            kv_indices=unified_kv_indices,
+            prefix_lens=prefix_lens.to(torch.int32),
+            max_len_extend=max(EXTEND_LENS),
+            sm_scale=sm_scale,
+            logit_cap=logit_cap,
+            is_causal=is_causal,
+            use_rht=use_rht,
+            convert=convert,
+        )
+    
+        ref = _reference_extend(
+            q_extend=b["q_extend"],
+            k_prefix_list=[
+                _dequant_rows(b["k_cache"], b["k_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            v_prefix_list=[
+                _dequant_rows(b["v_cache"], b["v_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            k_chunk_list=[
+                _dequant_rows(b["k_cache"], b["k_scale"], s, use_rht=use_rht)
+                for s in b["extend_slots"]
+            ],
+            v_chunk_list=[
+                _dequant_rows(b["v_cache"], b["v_scale"], s, use_rht=use_rht)
+                for s in b["extend_slots"]
+            ],
+            sm_scale=sm_scale,
+            is_causal=is_causal,
+            logit_cap=logit_cap,
+        )
+>       torch.testing.assert_close(o.float(), ref, atol=8e-3, rtol=1.5e-2)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 21 / 274176 (0.0%)
+E       Greatest absolute difference: 0.016100406646728516 at index (7, 5, 15) (up to 0.008 allowed)
+E       Greatest relative difference: 1.8399269580841064 at index (22, 1, 37) (up to 0.015 allowed)
+
+test/registered/kernels/ops/attention/test_extend_attention_int4.py:339: AssertionError
+_______ test_unified_extend_matches_reference[gqa4_d96-causal-rht-cast] ________
+
+convert = 'cast', use_rht = True, is_causal = True, num_q_heads = 8
+num_kv_heads = 2, head_dim = 96, logit_cap = 0.0
+
+    @pytest.mark.parametrize("convert", CONVERSIONS)
+    @pytest.mark.parametrize("use_rht", [True, False], ids=["rht", "norht"])
+    @pytest.mark.parametrize("is_causal", [True, False], ids=["causal", "noncausal"])
+    @pytest.mark.parametrize(
+        "num_q_heads,num_kv_heads,head_dim,logit_cap",
+        [
+            (32, 8, 128, 0.0),
+            (16, 2, 64, 0.0),
+            (8, 8, 128, 30.0),
+            (8, 2, 96, 0.0),
+        ],
+        ids=["gqa4_d128", "gqa8_d64", "mha_logit_cap", "gqa4_d96"],
+    )
+    def test_unified_extend_matches_reference(
+        convert, use_rht, is_causal, num_q_heads, num_kv_heads, head_dim, logit_cap
+    ):
+        b = _make_batch(
+            prefix_lens=PREFIX_LENS,
+            extend_lens=EXTEND_LENS,
+            num_q_heads=num_q_heads,
+            num_kv_heads=num_kv_heads,
+            head_dim=head_dim,
+            use_rht=use_rht,
+        )
+        unified_kv_indptr, unified_kv_indices, prefix_lens = build_unified_kv_indices(
+            b["prefix_indptr"],
+            b["prefix_kv_indices"],
+            b["extend_start_loc"],
+            b["extend_seq_lens"],
+            b["extend_kv_indices"],
+            len(PREFIX_LENS),
+        )
+        o = torch.empty_like(b["q_extend"])
+        sm_scale = head_dim**-0.5
+    
+        extend_attention_fwd_unified_int4(
+            q=b["q_extend"],
+            o=o,
+            k_buffer=b["k_cache"],
+            v_buffer=b["v_cache"],
+            k_scale_buffer=b["k_scale"],
+            v_scale_buffer=b["v_scale"],
+            qo_indptr=b["qo_indptr"],
+            kv_indptr=unified_kv_indptr,
+            kv_indices=unified_kv_indices,
+            prefix_lens=prefix_lens.to(torch.int32),
+            max_len_extend=max(EXTEND_LENS),
+            sm_scale=sm_scale,
+            logit_cap=logit_cap,
+            is_causal=is_causal,
+            use_rht=use_rht,
+            convert=convert,
+        )
+    
+        ref = _reference_extend(
+            q_extend=b["q_extend"],
+            k_prefix_list=[
+                _dequant_rows(b["k_cache"], b["k_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            v_prefix_list=[
+                _dequant_rows(b["v_cache"], b["v_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            k_chunk_list=[
+                _dequant_rows(b["k_cache"], b["k_scale"], s, use_rht=use_rht)
+                for s in b["extend_slots"]
+            ],
+            v_chunk_list=[
+                _dequant_rows(b["v_cache"], b["v_scale"], s, use_rht=use_rht)
+                for s in b["extend_slots"]
+            ],
+            sm_scale=sm_scale,
+            is_causal=is_causal,
+            logit_cap=logit_cap,
+        )
+>       torch.testing.assert_close(o.float(), ref, atol=8e-3, rtol=1.5e-2)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 21 / 274176 (0.0%)
+E       Greatest absolute difference: 0.016100406646728516 at index (7, 5, 15) (up to 0.008 allowed)
+E       Greatest relative difference: 1.8399269580841064 at index (22, 1, 37) (up to 0.015 allowed)
+
+test/registered/kernels/ops/attention/test_extend_attention_int4.py:339: AssertionError
+_____ test_unified_extend_matches_reference[gqa4_d96-noncausal-rht-magic] ______
+
+convert = 'magic', use_rht = True, is_causal = False, num_q_heads = 8
+num_kv_heads = 2, head_dim = 96, logit_cap = 0.0
+
+    @pytest.mark.parametrize("convert", CONVERSIONS)
+    @pytest.mark.parametrize("use_rht", [True, False], ids=["rht", "norht"])
+    @pytest.mark.parametrize("is_causal", [True, False], ids=["causal", "noncausal"])
+    @pytest.mark.parametrize(
+        "num_q_heads,num_kv_heads,head_dim,logit_cap",
+        [
+            (32, 8, 128, 0.0),
+            (16, 2, 64, 0.0),
+            (8, 8, 128, 30.0),
+            (8, 2, 96, 0.0),
+        ],
+        ids=["gqa4_d128", "gqa8_d64", "mha_logit_cap", "gqa4_d96"],
+    )
+    def test_unified_extend_matches_reference(
+        convert, use_rht, is_causal, num_q_heads, num_kv_heads, head_dim, logit_cap
+    ):
+        b = _make_batch(
+            prefix_lens=PREFIX_LENS,
+            extend_lens=EXTEND_LENS,
+            num_q_heads=num_q_heads,
+            num_kv_heads=num_kv_heads,
+            head_dim=head_dim,
+            use_rht=use_rht,
+        )
+        unified_kv_indptr, unified_kv_indices, prefix_lens = build_unified_kv_indices(
+            b["prefix_indptr"],
+            b["prefix_kv_indices"],
+            b["extend_start_loc"],
+            b["extend_seq_lens"],
+            b["extend_kv_indices"],
+            len(PREFIX_LENS),
+        )
+        o = torch.empty_like(b["q_extend"])
+        sm_scale = head_dim**-0.5
+    
+        extend_attention_fwd_unified_int4(
+            q=b["q_extend"],
+            o=o,
+            k_buffer=b["k_cache"],
+            v_buffer=b["v_cache"],
+            k_scale_buffer=b["k_scale"],
+            v_scale_buffer=b["v_scale"],
+            qo_indptr=b["qo_indptr"],
+            kv_indptr=unified_kv_indptr,
+            kv_indices=unified_kv_indices,
+            prefix_lens=prefix_lens.to(torch.int32),
+            max_len_extend=max(EXTEND_LENS),
+            sm_scale=sm_scale,
+            logit_cap=logit_cap,
+            is_causal=is_causal,
+            use_rht=use_rht,
+            convert=convert,
+        )
+    
+        ref = _reference_extend(
+            q_extend=b["q_extend"],
+            k_prefix_list=[
+                _dequant_rows(b["k_cache"], b["k_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            v_prefix_list=[
+                _dequant_rows(b["v_cache"], b["v_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            k_chunk_list=[
+                _dequant_rows(b["k_cache"], b["k_scale"], s, use_rht=use_rht)
+                for s in b["extend_slots"]
+            ],
+            v_chunk_list=[
+                _dequant_rows(b["v_cache"], b["v_scale"], s, use_rht=use_rht)
+                for s in b["extend_slots"]
+            ],
+            sm_scale=sm_scale,
+            is_causal=is_causal,
+            logit_cap=logit_cap,
+        )
+>       torch.testing.assert_close(o.float(), ref, atol=8e-3, rtol=1.5e-2)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 16 / 274176 (0.0%)
+E       Greatest absolute difference: 0.015187948942184448 at index (6, 5, 25) (up to 0.008 allowed)
+E       Greatest relative difference: 23.814735412597656 at index (309, 7, 75) (up to 0.015 allowed)
+
+test/registered/kernels/ops/attention/test_extend_attention_int4.py:339: AssertionError
+______ test_unified_extend_matches_reference[gqa4_d96-noncausal-rht-cast] ______
+
+convert = 'cast', use_rht = True, is_causal = False, num_q_heads = 8
+num_kv_heads = 2, head_dim = 96, logit_cap = 0.0
+
+    @pytest.mark.parametrize("convert", CONVERSIONS)
+    @pytest.mark.parametrize("use_rht", [True, False], ids=["rht", "norht"])
+    @pytest.mark.parametrize("is_causal", [True, False], ids=["causal", "noncausal"])
+    @pytest.mark.parametrize(
+        "num_q_heads,num_kv_heads,head_dim,logit_cap",
+        [
+            (32, 8, 128, 0.0),
+            (16, 2, 64, 0.0),
+            (8, 8, 128, 30.0),
+            (8, 2, 96, 0.0),
+        ],
+        ids=["gqa4_d128", "gqa8_d64", "mha_logit_cap", "gqa4_d96"],
+    )
+    def test_unified_extend_matches_reference(
+        convert, use_rht, is_causal, num_q_heads, num_kv_heads, head_dim, logit_cap
+    ):
+        b = _make_batch(
+            prefix_lens=PREFIX_LENS,
+            extend_lens=EXTEND_LENS,
+            num_q_heads=num_q_heads,
+            num_kv_heads=num_kv_heads,
+            head_dim=head_dim,
+            use_rht=use_rht,
+        )
+        unified_kv_indptr, unified_kv_indices, prefix_lens = build_unified_kv_indices(
+            b["prefix_indptr"],
+            b["prefix_kv_indices"],
+            b["extend_start_loc"],
+            b["extend_seq_lens"],
+            b["extend_kv_indices"],
+            len(PREFIX_LENS),
+        )
+        o = torch.empty_like(b["q_extend"])
+        sm_scale = head_dim**-0.5
+    
+        extend_attention_fwd_unified_int4(
+            q=b["q_extend"],
+            o=o,
+            k_buffer=b["k_cache"],
+            v_buffer=b["v_cache"],
+            k_scale_buffer=b["k_scale"],
+            v_scale_buffer=b["v_scale"],
+            qo_indptr=b["qo_indptr"],
+            kv_indptr=unified_kv_indptr,
+            kv_indices=unified_kv_indices,
+            prefix_lens=prefix_lens.to(torch.int32),
+            max_len_extend=max(EXTEND_LENS),
+            sm_scale=sm_scale,
+            logit_cap=logit_cap,
+            is_causal=is_causal,
+            use_rht=use_rht,
+            convert=convert,
+        )
+    
+        ref = _reference_extend(
+            q_extend=b["q_extend"],
+            k_prefix_list=[
+                _dequant_rows(b["k_cache"], b["k_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            v_prefix_list=[
+                _dequant_rows(b["v_cache"], b["v_scale"], s, use_rht=use_rht)
+                for s in b["prefix_slots"]
+            ],
+            k_chunk_list=[
+                _dequant_rows(b["k_cache"], b["k_scale"], s, use_rht=use_rht)
+                for s in b["extend_slots"]
+            ],
+            v_chunk_list=[
+                _dequant_rows(b["v_cache"], b["v_scale"], s, use_rht=use_rht)
+                for s in b["extend_slots"]
+            ],
+            sm_scale=sm_scale,
+            is_causal=is_causal,
+            logit_cap=logit_cap,
+        )
+>       torch.testing.assert_close(o.float(), ref, atol=8e-3, rtol=1.5e-2)
+E       AssertionError: Tensor-likes are not close!
+E       
+E       Mismatched elements: 16 / 274176 (0.0%)
+E       Greatest absolute difference: 0.015187948942184448 at index (6, 5, 25) (up to 0.008 allowed)
+E       Greatest relative difference: 23.814735412597656 at index (309, 7, 75) (up to 0.015 allowed)
+
+test/registered/kernels/ops/attention/test_extend_attention_int4.py:339: AssertionError
+=============================== warnings summary ===============================
+../../envs/sglang/lib/python3.12/site-packages/_pytest/config/__init__.py:1636
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/_pytest/config/__init__.py:1636: PytestConfigWarning: Unknown config option: asyncio_mode
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/blackwell/blockscaled_contiguous_gather_grouped_gemm_act_fusion.py:3459
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/blackwell/blockscaled_contiguous_gather_grouped_gemm_act_fusion.py:3459: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/blackwell/moe_w4a16_kernel.py:2386
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/blackwell/moe_w4a16_kernel.py:2386: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:29
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:29: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    a_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:31
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:31: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    b_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:34
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/utils.py:34: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/contiguous_grouped_gemm_finalize_fusion.py:968
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/contiguous_grouped_gemm_finalize_fusion.py:968: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    a_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/contiguous_grouped_gemm_finalize_fusion.py:970
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/fused_moe/cute_dsl/hopper/contiguous_grouped_gemm_finalize_fusion.py:970: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    b_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_blackwell.py:427
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_blackwell.py:427: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    epi_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_blackwell.py:2391
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_blackwell.py:2391: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/cute_dsl/low_latency_blockscaled_gemm.py:102
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/cute_dsl/low_latency_blockscaled_gemm.py:102: DeprecationWarning: cutlass.utils.smem_allocator.get_smem_capacity_in_bytes is deprecated; use cutlass.memory.get_smem_capacity_in_bytes instead. It will be removed in a future release.
+    _SMEM_CAPACITY_BYTES = cutlass.utils.get_smem_capacity_in_bytes("sm_100")
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_rubin.py:218
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gemm/kernels/grouped_gemm_masked_rubin.py:218: DeprecationWarning: cutlass.utils.LayoutEnum is deprecated; use cutlass.tensor_utils.LayoutEnum instead. It will be removed in a future release.
+    c_layout: utils.LayoutEnum,
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_chunked.py:95
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_chunked.py:95
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_chunked.py:95: DeprecationWarning: cutlass.utils.TensorMapUpdateMode is deprecated; use cutlass.tensor_utils.TensorMapUpdateMode instead. It will be removed in a future release.
+    from cutlass.utils import TensorMapManager, TensorMapUpdateMode
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/delta_rule_dsl/collective_store_tma.py:6
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/delta_rule_dsl/collective_store_tma.py:6: DeprecationWarning: cutlass.utils.tensormap_manager.TensorMapUpdateMode is deprecated; use cutlass.tensor_utils.TensorMapUpdateMode instead. It will be removed in a future release.
+    from cutlass.utils.tensormap_manager import TensorMapManager, TensorMapUpdateMode
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_cp_prefill.py:55
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_cp_prefill.py:55
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/gdn_kernels/blackwell/gated_delta_net_cp_prefill.py:55: DeprecationWarning: cutlass.utils.TensorMapUpdateMode is deprecated; use cutlass.tensor_utils.TensorMapUpdateMode instead. It will be removed in a future release.
+    from cutlass.utils import TensorMapManager, TensorMapUpdateMode
+
+../../envs/sglang/lib/python3.12/site-packages/flashinfer/cute_dsl/availability.py:136
+  $KVQ_WORK/envs/sglang/lib/python3.12/site-packages/flashinfer/cute_dsl/availability.py:136: DeprecationWarning: Arch from arch.py is deprecated. Use Arch from enums.py instead.
+    from cutlass.base_dsl.arch import Arch
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED test/registered/kernels/ops/kvcache/test_int4_per_token_head.py::test_store_scatters_and_matches_reference[64-norht]
+FAILED test/registered/kernels/ops/kvcache/test_int4_per_token_head.py::test_store_scatters_and_matches_reference[128-norht]
+FAILED test/registered/kernels/ops/kvcache/test_int4_per_token_head.py::test_store_scatters_and_matches_reference[96-norht]
+FAILED test/registered/kernels/ops/attention/test_extend_attention_int4.py::test_regular_extend_matches_reference[gqa4_d96-causal-rht-magic]
+FAILED test/registered/kernels/ops/attention/test_extend_attention_int4.py::test_regular_extend_matches_reference[gqa4_d96-causal-rht-cast]
+FAILED test/registered/kernels/ops/attention/test_extend_attention_int4.py::test_regular_extend_matches_reference[gqa4_d96-noncausal-rht-magic]
+FAILED test/registered/kernels/ops/attention/test_extend_attention_int4.py::test_regular_extend_matches_reference[gqa4_d96-noncausal-rht-cast]
+FAILED test/registered/kernels/ops/attention/test_extend_attention_int4.py::test_unified_extend_matches_reference[gqa4_d96-causal-rht-magic]
+FAILED test/registered/kernels/ops/attention/test_extend_attention_int4.py::test_unified_extend_matches_reference[gqa4_d96-causal-rht-cast]
+FAILED test/registered/kernels/ops/attention/test_extend_attention_int4.py::test_unified_extend_matches_reference[gqa4_d96-noncausal-rht-magic]
+FAILED test/registered/kernels/ops/attention/test_extend_attention_int4.py::test_unified_extend_matches_reference[gqa4_d96-noncausal-rht-cast]
+11 failed, 112 passed, 20 warnings in 242.57s (0:04:02)
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute

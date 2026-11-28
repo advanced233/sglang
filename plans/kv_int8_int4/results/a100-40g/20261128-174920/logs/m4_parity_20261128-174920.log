@@ -1,0 +1,28 @@
+{
+  "norht_exact": {
+    "k_bytes_exact": true,
+    "v_bytes_exact": true,
+    "k_scale_bits_exact": true,
+    "v_scale_bits_exact": true
+  },
+  "rht_vllm_default": {
+    "vllm_hadacore": true,
+    "k_byte_match_rate": 0.978057861328125,
+    "v_byte_match_rate": 0.9754161834716797,
+    "k_scale_bit_match_rate": 0.48876953125,
+    "v_scale_bit_match_rate": 0.4990234375,
+    "k_max_nibble_diff": 2,
+    "attn_cos_sim": 0.9985077977180481,
+    "attn_max_abs_diff": 0.2734375
+  },
+  "rht_vllm_triton_mma": {
+    "vllm_hadacore": false,
+    "k_byte_match_rate": 1.0,
+    "v_byte_match_rate": 1.0,
+    "k_scale_bit_match_rate": 1.0,
+    "v_scale_bit_match_rate": 1.0,
+    "k_max_nibble_diff": 0,
+    "attn_cos_sim": 0.9999901652336121,
+    "attn_max_abs_diff": 0.04296875
+  }
+}

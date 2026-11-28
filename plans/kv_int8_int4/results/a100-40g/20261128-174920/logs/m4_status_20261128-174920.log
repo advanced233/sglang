@@ -1,0 +1,9 @@
+start=2026-11-28T17:49:26+08:00 code=90fff88230744c2b00465b6e310498c906c78226
+parity_gate_policy=all no-RHT exact flags true; both RHT modes byte and scale match rates 1.0; attention cosine >= 0.999 (conservative operational threshold)
+cpu_exit=1
+gpu_exit=1
+attention_exit=0
+parity_exit=0
+parity_gate=fail
+diag_and_serve=skipped_test_or_parity_failure
+experiments_end=2026-11-28T17:56:51+08:00
