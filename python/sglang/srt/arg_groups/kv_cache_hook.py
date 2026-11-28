@@ -109,21 +109,22 @@ def handle_mxfp8_kv_cache_compatibility(server_args: Any) -> None:
         )
 
 
-def handle_int8_kv_cache_compatibility(server_args: Any) -> None:
-    """INT8 per-token-head KV cache: CUDA, MHA, Triton attention, plain pool."""
+def _check_per_token_head_kv_cache_compatibility(
+    server_args: Any, expected_dtype: str
+) -> None:
     cfg = resolving_view(server_args)
-    if cfg.kv_cache_dtype != "int8_per_token_head":
+    if cfg.kv_cache_dtype != expected_dtype:
         return
     if not get_platform().is_cuda:
-        raise ValueError("--kv-cache-dtype int8_per_token_head requires CUDA.")
+        raise ValueError(f"--kv-cache-dtype {expected_dtype} requires CUDA.")
     if use_mla_backend(server_args):
         raise ValueError(
-            "--kv-cache-dtype int8_per_token_head does not support MLA models."
+            f"--kv-cache-dtype {expected_dtype} does not support MLA models."
         )
     prefill_backend, decode_backend = attention_backends_of(resolved_view(server_args))
     if (prefill_backend, decode_backend) != ("triton", "triton"):
         raise ValueError(
-            "--kv-cache-dtype int8_per_token_head requires --attention-backend "
+            f"--kv-cache-dtype {expected_dtype} requires --attention-backend "
             f"triton; got prefill={prefill_backend}, decode={decode_backend}."
         )
     # The host, transfer, and unified pools copy KV rows without the separate
@@ -138,9 +139,19 @@ def handle_int8_kv_cache_compatibility(server_args: Any) -> None:
     used = [flag for flag, enabled in unsupported.items() if enabled]
     if used:
         raise ValueError(
-            "--kv-cache-dtype int8_per_token_head does not yet support "
+            f"--kv-cache-dtype {expected_dtype} does not yet support "
             f"{', '.join(used)}."
         )
+
+
+def handle_int8_kv_cache_compatibility(server_args: Any) -> None:
+    """INT8 per-token-head KV cache: CUDA, MHA, Triton attention, plain pool."""
+    _check_per_token_head_kv_cache_compatibility(server_args, "int8_per_token_head")
+
+
+def handle_int4_kv_cache_compatibility(server_args: Any) -> None:
+    """INT4 per-token-head KV cache: CUDA, MHA, Triton attention, plain pool."""
+    _check_per_token_head_kv_cache_compatibility(server_args, "int4_per_token_head")
 
 
 def handle_kv4_compatibility(server_args: Any) -> None:
@@ -916,11 +927,16 @@ def validate_prefill_only_disable_kv_cache_args(server_args: Any):
             "Other prefill-only workloads may be supported in a future change once "
             "their attention paths stop reading or writing the paged KV cache."
         )
-    if cfg.kv_cache_dtype in ("nvfp4", "fp4_mx_block16", "int8_per_token_head"):
+    if cfg.kv_cache_dtype in (
+        "nvfp4",
+        "fp4_mx_block16",
+        "int8_per_token_head",
+        "int4_per_token_head",
+    ):
         raise ValueError(
             "--prefill-only-disable-kv-cache does not currently support "
-            "--kv-cache-dtype=nvfp4, fp4_mx_block16, or int8_per_token_head "
-            "because those pools use a separate allocation path."
+            "--kv-cache-dtype=nvfp4, fp4_mx_block16, int8_per_token_head, or "
+            "int4_per_token_head because those pools use a separate allocation path."
         )
     if cfg.kv_cache_dtype == "mxfp8":
         raise ValueError(

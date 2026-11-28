@@ -1341,6 +1341,8 @@ class Envs:
     # decode and deterministic mode) instead of using unquantized BF16 K/V for
     # the current chunk.
     SGLANG_ENABLE_TRITON_INT8_UNIFIED_EXTEND = EnvBool(False)
+    # Same opt-in 1-stage unified extend toggle for int4_per_token_head.
+    SGLANG_ENABLE_TRITON_INT4_UNIFIED_EXTEND = EnvBool(False)
 
     # ===================================================================
     # Expert parallel load balancing

@@ -66,6 +66,8 @@ _TRITON_KERNELS = [
     ("mla_buffer", "get_mla_kv_buffer_triton"),
     ("int8_per_token_head", "store_int8_per_token_head_kv"),
     ("int8_per_token_head", "dequant_int8_per_token_head"),
+    ("int4_per_token_head", "store_int4_per_token_head_kv"),
+    ("int4_per_token_head", "dequant_int4_per_token_head"),
 ]
 for _mod, _fn in _TRITON_KERNELS:
     register_kernel(

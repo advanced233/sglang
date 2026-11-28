@@ -75,6 +75,8 @@ def configure_kv_cache_dtype(
         kv_cache_dtype = torch.bfloat16
     elif server_args_kv_cache_dtype == "int8_per_token_head":
         kv_cache_dtype = torch.int8
+    elif server_args_kv_cache_dtype == "int4_per_token_head":
+        kv_cache_dtype = torch.uint8
     elif server_args_kv_cache_dtype in ("nvfp4", "fp4_mx_block16"):
         if hasattr(torch, "float4_e2m1fn_x2"):
             kv_cache_dtype = torch.float4_e2m1fn_x2

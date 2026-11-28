@@ -1030,6 +1030,126 @@ class Int8PerTokenHeadKVCacheMethod(KVCacheQuantMethodBase):
         return data_size + scale_size
 
 
+class Int4PerTokenHeadKVCacheMethod(KVCacheQuantMethodBase):
+    """Asymmetric INT4 with RHT and one fp32 scale (+ 4-bit zero-point) per (token, head).
+
+    Matches vLLM's ``int4_per_token_head`` quantization and RHT seed
+    (``0x9E3779B9``). Packed data is ``[slots, heads, head_dim // 2]`` uint8
+    (even index in low nibble, odd in high nibble); fp32 scales with embedded
+    4-bit zero-points live in separate ``[slots, heads]`` buffers for aligned
+    vectorized loads.
+    """
+
+    name = "int4_per_token_head"
+
+    def __init__(
+        self,
+        num_layers: Optional[int] = None,
+        device: Optional[str] = None,
+        page_size: Optional[int] = None,
+    ):
+        pass
+
+    def create_buffers(
+        self, size: int, head_num: int, head_dim: int, layer_num: int, device: str
+    ) -> dict:
+        if head_dim % 2 != 0:
+            raise ValueError(
+                f"int4_per_token_head KV cache requires even head_dim, got {head_dim}."
+            )
+
+        def per_layer(shape, dtype):
+            return [
+                torch.zeros(shape, dtype=dtype, device=device) for _ in range(layer_num)
+            ]
+
+        store_dtype = self.kv_storage_dtype()
+        return {
+            "k_buffer": per_layer((size, head_num, head_dim // 2), store_dtype),
+            "v_buffer": per_layer((size, head_num, head_dim // 2), store_dtype),
+            "k_scale_buffer": per_layer((size, head_num), torch.float32),
+            "v_scale_buffer": per_layer((size, head_num), torch.float32),
+            "dq_k_buffer": None,
+            "dq_v_buffer": None,
+            "store_dtype": store_dtype,
+        }
+
+    def quantize_and_store(
+        self,
+        k_buffer,
+        v_buffer,
+        k_scale_buffer,
+        v_scale_buffer,
+        loc,
+        cache_k,
+        cache_v,
+        k_scale=None,
+        v_scale=None,
+        native_k_scale_buffer=None,
+        native_v_scale_buffer=None,
+    ) -> None:
+        from sglang.kernels.ops.kvcache.int4_per_token_head import (
+            store_int4_per_token_head_kv,
+        )
+
+        # The Triton backend would still apply a checkpoint scale as a descale
+        # on read, so accepting one here would silently double-scale.
+        if k_scale is not None or v_scale is not None:
+            raise NotImplementedError(
+                "int4_per_token_head KV cache does not support checkpoint KV scales."
+            )
+        store_int4_per_token_head_kv(
+            k=cache_k,
+            v=cache_v,
+            loc=loc,
+            k_cache=k_buffer,
+            v_cache=v_buffer,
+            k_scale=k_scale_buffer,
+            v_scale=v_scale_buffer,
+        )
+
+    def dequantize_kv_tensor(
+        self,
+        fp4_tensor: Tensor,
+        scales: Tensor,
+        layer_id: int,
+        dtype: Optional[torch.dtype] = None,
+    ) -> Tensor:
+        from sglang.kernels.ops.kvcache.int4_per_token_head import (
+            dequant_int4_per_token_head,
+        )
+
+        return dequant_int4_per_token_head(
+            data=fp4_tensor,
+            scale=scales,
+            dtype=dtype or self.plain_attention_kv_dtype() or torch.bfloat16,
+        )
+
+    def dequantize_prev_kv(
+        self,
+        k_fp4: Tensor,
+        k_scales: Tensor,
+        v_fp4: Tensor,
+        v_scales: Tensor,
+        layer_id: int,
+    ) -> tuple[Tensor, Tensor]:
+        return (
+            self.dequantize_kv_tensor(k_fp4, k_scales, layer_id),
+            self.dequantize_kv_tensor(v_fp4, v_scales, layer_id),
+        )
+
+    def compute_cell_size(
+        self, head_num: int, head_dim: int, num_layers: int, kv_size: int
+    ) -> int:
+        if head_dim % 2 != 0:
+            raise ValueError(
+                f"int4_per_token_head KV cache requires even head_dim, got {head_dim}."
+            )
+        data_size = head_num * (head_dim // 2) * num_layers * 2 * kv_size
+        scale_size = head_num * num_layers * 2 * torch.float32.itemsize
+        return data_size + scale_size
+
+
 # Registry: method name -> attention access rules.
 _PREFILL = KVCacheAttentionPhase.PREFILL
 _DECODE = KVCacheAttentionPhase.DECODE
@@ -1041,6 +1161,7 @@ _ANY_BACKEND = KVCacheBackendMatcher(any_backend=True)
 _NVFP4_SCALE = "nvfp4"
 _FP4_MX_SCALE = "fp4_mx_block16"
 _INT8_PTH_SCALE = "int8_per_token_head"
+_INT4_PTH_SCALE = "int4_per_token_head"
 _FP8_E4M3 = torch.float8_e4m3fn
 _TORCH_FP4 = getattr(torch, "float4_e2m1fn_x2", None)
 _BF16 = torch.bfloat16
@@ -1053,6 +1174,7 @@ _FP4_MX_MHA_BACKENDS = frozenset(
 _FP4_MX_PREFILL_BACKENDS = _FP4_MX_MHA_BACKENDS | frozenset({"fa4"})
 _CPU_FP8_BACKENDS = frozenset({"intel_amx"})
 _INT8_PTH_BACKENDS = frozenset({"triton"})
+_INT4_PTH_BACKENDS = frozenset({"triton"})
 
 
 def _backend_matcher(backends) -> KVCacheBackendMatcher:
@@ -1153,6 +1275,14 @@ KV_CACHE_ATTENTION_ACCESS_REGISTRY: dict[str, tuple[KVCacheAttentionAccess, ...]
             _DECODE, _INT8_PTH_BACKENDS, _INT8_PTH_SCALE, storage_dtype=torch.int8
         ),
     ),
+    Int4PerTokenHeadKVCacheMethod.name: (
+        _fused_dequant(
+            _PREFILL, _INT4_PTH_BACKENDS, _INT4_PTH_SCALE, storage_dtype=torch.uint8
+        ),
+        _fused_dequant(
+            _DECODE, _INT4_PTH_BACKENDS, _INT4_PTH_SCALE, storage_dtype=torch.uint8
+        ),
+    ),
 }
 
 
@@ -1162,6 +1292,7 @@ KV_CACHE_QUANT_REGISTRY: dict[str, type[KVCacheQuantMethodBase]] = {
     "nvfp4": NVFP4KVCacheMethod,
     "fp4_mx_block16": FP4MXBlock16KVCacheMethod,
     "int8_per_token_head": Int8PerTokenHeadKVCacheMethod,
+    "int4_per_token_head": Int4PerTokenHeadKVCacheMethod,
 }
 
 

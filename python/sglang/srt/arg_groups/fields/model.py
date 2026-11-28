@@ -206,7 +206,10 @@ class Model(msgspec.Struct):
                 "selects the MX-style block-size-16 FP4 E2M1 KV cache "
                 "recipe. Both require CUDA 12.8+ and PyTorch 2.8.0+. "
                 '"int8_per_token_head" stores INT8 with one scale per token and '
-                "head; it requires --attention-backend triton"
+                "head; it requires --attention-backend triton. "
+                '"int4_per_token_head" packs asymmetric INT4 with Randomized '
+                "Hadamard Transform and per-(token, head) scale/zero-point; "
+                "it requires --attention-backend triton"
             ),
             choices=[
                 "auto",
@@ -218,6 +221,7 @@ class Model(msgspec.Struct):
                 "nvfp4",
                 "fp4_mx_block16",
                 "int8_per_token_head",
+                "int4_per_token_head",
             ],
             resolvable=True,
         ),

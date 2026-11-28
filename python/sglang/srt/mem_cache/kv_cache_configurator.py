@@ -436,7 +436,7 @@ class KVCacheConfigurator:
     def _build_fp4_quant_method(self, *, num_layers: int):
         if not (
             is_float4_e2m1fn_x2(self.kv_cache_dtype)
-            or self.kv_cache_dtype == torch.int8
+            or self.kv_cache_dtype in (torch.int8, torch.uint8)
         ):
             return None
         quant_name = resolve_kv_cache_quant(self.kv_cache_dtype_str)
@@ -1820,7 +1820,7 @@ class KVCacheConfigurator:
             reject_out_of_tree_path(
                 current_platform, subsystem="the block-scaled (fp4 / mxfp8) KV pool"
             )
-        if self.kv_cache_dtype == torch.int8 and (
+        if self.kv_cache_dtype in (torch.int8, torch.uint8) and (
             is_dsv4_model
             or self.use_mla_backend
             or self.is_hybrid_swa
@@ -1829,7 +1829,7 @@ class KVCacheConfigurator:
             or enable_page_major
         ):
             raise ValueError(
-                "--kv-cache-dtype int8_per_token_head supports only the plain "
+                f"--kv-cache-dtype {self.kv_cache_dtype_str} supports only the plain "
                 "per-layer MHA KV pool."
             )
 
@@ -1974,7 +1974,7 @@ class KVCacheConfigurator:
             or get_memory().enable_page_major_kv_layout
             or self.kv_cache_dtype_str == "mxfp8"
             or is_float4_e2m1fn_x2(self.kv_cache_dtype)
-            or self.kv_cache_dtype == torch.int8
+            or self.kv_cache_dtype in (torch.int8, torch.uint8)
         ):
             raise ValueError("MTP KV sharding requires the plain per-layer KV layout.")
         if (

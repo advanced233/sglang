@@ -497,7 +497,10 @@ class DefaultPoolConfigurator(MemoryPoolConfigurator):
                 * kv_size
             )
 
-            if is_float4_e2m1fn_x2(kv_cache_dtype) or kv_cache_dtype == torch.int8:
+            if is_float4_e2m1fn_x2(kv_cache_dtype) or kv_cache_dtype in (
+                torch.int8,
+                torch.uint8,
+            ):
                 from sglang.srt.layers.quantization.fp4_kv_cache_quant_method import (
                     get_kv_cache_quant_method,
                     resolve_kv_cache_quant,
