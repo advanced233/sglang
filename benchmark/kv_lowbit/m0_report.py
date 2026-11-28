@@ -123,6 +123,7 @@ def render(out_dir):
         ("main", "SGLang sweep", _sweep_table),
         ("vllm", "vLLM sweep (text prompts, input lengths approximate)", _sweep_table),
         ("m3b", "M3b: BF16 vs fused INT8 decode (Triton)", _sweep_table),
+        ("m4", "M4: BF16 vs fused INT4+RHT decode (Triton)", _sweep_table),
         (
             "pool",
             "Decode probe vs pool size (input 1024, concurrency 1)",

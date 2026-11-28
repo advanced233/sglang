@@ -40,15 +40,23 @@ from sglang.kernels.ops.kvcache.int4_per_token_head import (
 )
 
 
-def _default_extend_tile_regular_int4(head_dim: int) -> tuple[int, int, int, int]:
-    """Return ``(block_m, block_n, num_warps, num_stages)`` for 2-stage extend."""
+def _default_extend_tile_regular_int4(
+    head_dim: int,
+) -> tuple[int, int, int, int, int, int]:
+    """Return ``(block_m, block_n, block_n_prefix, num_warps, num_stages, prefix_stages)``.
+
+    Stage 1 (INT4 prefix) uses ``block_n_prefix=64`` with 2-stage software
+    pipelining (4 KB packed K + 4 KB packed V per stage) to eliminate register
+    spilling under split-dot, while Stage 2 (BF16 current chunk) keeps the
+    measured-fastest ``64x128, num_stages=1`` tile.
+    """
     if head_dim <= 64:
-        return 64, 64, 4, 1
+        return 64, 64, 64, 4, 1, 2
     if head_dim <= 128:
-        return 64, 128, 4, 1
+        return 64, 128, 64, 4, 1, 2
     if head_dim <= 256:
-        return 64, 64, 4, 1
-    return 32, 32, 4, 1
+        return 64, 64, 64, 4, 1, 1
+    return 32, 32, 32, 4, 1, 1
 
 
 def _default_extend_tile_unified_int4(head_dim: int) -> tuple[int, int, int, int]:
@@ -113,6 +121,7 @@ def _fwd_extend_kernel_int4(
     BLOCK_M: tl.constexpr,
     BLOCK_N: tl.constexpr,
     BLOCK_N_PREFIX: tl.constexpr,
+    PREFIX_STAGES: tl.constexpr,
     USE_CUSTOM_MASK: tl.constexpr,
     IS_CAUSAL: tl.constexpr,
     SKIP_PREFIX_CUSTOM_MASK: tl.constexpr,
@@ -165,12 +174,13 @@ def _fwd_extend_kernel_int4(
         + offs_d[None, :]
     )
 
-    acc = tl.zeros([BLOCK_M, BLOCK_DV], dtype=tl.float32)
     deno = tl.zeros([BLOCK_M], dtype=tl.float32)
     e_max = tl.zeros([BLOCK_M], dtype=tl.float32) - float("inf")
 
     # Stage 1: attend to the cached INT4 prefix in rotated space, then apply
     # inverse RHT once at the end of Stage 1 so Stage 2 runs in original space.
+    # Defer `acc` creation to the else branch so it is never live alongside
+    # `acc_even`/`acc_odd` during Stage 1.
     if cur_seq_len_prefix > 0:
         q_raw = tl.load(Q_Extend + offs_q, mask=mask_m[:, None], other=0.0)
         m_even_k = tl.load(
@@ -195,12 +205,16 @@ def _fwd_extend_kernel_int4(
         base_k = cur_kv_head * stride_buf_kh + offs_pk[None, :]
         base_v = cur_kv_head * stride_buf_vh + offs_pv[None, :]
 
-        for start_n in range(0, cur_seq_len_prefix, BLOCK_N_PREFIX):
+        HAS_2D_PREFIX_MASK: tl.constexpr = (
+            USE_CUSTOM_MASK and not SKIP_PREFIX_CUSTOM_MASK
+        ) or SLIDING_WINDOW_SIZE > 0
+        STAGE1_PIPE_STAGES: tl.constexpr = 1 if HAS_2D_PREFIX_MASK else PREFIX_STAGES
+
+        for start_n in tl.range(
+            0, cur_seq_len_prefix, BLOCK_N_PREFIX, num_stages=STAGE1_PIPE_STAGES
+        ):
             start_n = tl.multiple_of(start_n, BLOCK_N_PREFIX)
             mask_n = (start_n + offs_n_prefix) < cur_seq_len_prefix
-            HAS_2D_PREFIX_MASK: tl.constexpr = (
-                USE_CUSTOM_MASK and not SKIP_PREFIX_CUSTOM_MASK
-            ) or SLIDING_WINDOW_SIZE > 0
 
             SKIP_TILE = False
             if HAS_2D_PREFIX_MASK:
@@ -246,9 +260,10 @@ def _fwd_extend_kernel_int4(
                 k_zp = (ks_bits & 0xF).to(tl.float32)
                 k_scale = (ks_bits & -16).to(tl.float32, bitcast=True)
 
-                k_even = _unpack_lo_u4_to_f16(k_packed, CONVERT)
-                k_odd = _unpack_hi_u4_to_f16(k_packed, CONVERT)
-                qk = tl.dot(q_even, tl.trans(k_even)) + tl.dot(q_odd, tl.trans(k_odd))
+                qk = tl.dot(q_even, tl.trans(_unpack_lo_u4_to_f16(k_packed, CONVERT)))
+                qk = tl.dot(
+                    q_odd, tl.trans(_unpack_hi_u4_to_f16(k_packed, CONVERT)), acc=qk
+                )
                 qk = (qk - q_sum[:, None] * k_zp[None, :]) * (k_scale * sm_scale_rot)[
                     None, :
                 ]
@@ -285,15 +300,21 @@ def _fwd_extend_kernel_int4(
                 p_v = (p * (v_scale / v_scale_max)[None, :]).to(tl.float16)
                 pv_zp_sum = tl.sum(p_v.to(tl.float32) * v_zp[None, :], axis=1)
 
-                v_even = _unpack_lo_u4_to_f16(v_packed, CONVERT)
-                v_odd = _unpack_hi_u4_to_f16(v_packed, CONVERT)
                 acc_even = (
                     acc_even * re_scale[:, None]
-                    + (tl.dot(p_v, v_even) - pv_zp_sum[:, None]) * v_scale_max
+                    + (
+                        tl.dot(p_v, _unpack_lo_u4_to_f16(v_packed, CONVERT))
+                        - pv_zp_sum[:, None]
+                    )
+                    * v_scale_max
                 )
                 acc_odd = (
                     acc_odd * re_scale[:, None]
-                    + (tl.dot(p_v, v_odd) - pv_zp_sum[:, None]) * v_scale_max
+                    + (
+                        tl.dot(p_v, _unpack_hi_u4_to_f16(v_packed, CONVERT))
+                        - pv_zp_sum[:, None]
+                    )
+                    * v_scale_max
                 )
                 e_max = n_e_max
 
@@ -314,8 +335,10 @@ def _fwd_extend_kernel_int4(
         m_odd_v = tl.load(
             M_Odd_V + offs_dv[:, None] * BLOCK_PACKED_DV + offs_pv[None, :]
         )
-        acc += tl.dot(ao_f16, tl.trans(m_odd_v), out_dtype=tl.float32)
+        acc = tl.dot(ao_f16, tl.trans(m_odd_v), acc=acc, out_dtype=tl.float32)
         acc = acc * (row_max_a[:, None] * INV_RHT_NORM_V)
+    else:
+        acc = tl.zeros([BLOCK_M, BLOCK_DV], dtype=tl.float32)
 
     # Stage 2: attend to the current chunk's unrotated BF16/FP16 K_Extend / V_Extend.
     q = tl.load(
@@ -408,8 +431,7 @@ def _fwd_extend_kernel_int4(
             v = tl.load(
                 V_Extend + offs_v, mask=mask_n[:, None] & mask_dv[None, :], other=0.0
             )
-            dot = tl.dot(p.to(v.dtype), v)
-            acc = acc * re_scale[:, None] + dot
+            acc = tl.dot(p.to(v.dtype), v, acc=acc * re_scale[:, None])
             e_max = n_e_max
 
     if HAS_SINK:
@@ -598,9 +620,10 @@ def _fwd_extend_kernel_int4_fallback(
                 k_zp = (ks_bits & 0xF).to(tl.float32)
                 k_scale = (ks_bits & -16).to(tl.float32, bitcast=True)
 
-                k_even = _unpack_lo_u4_to_f16(k_packed, CONVERT)
-                k_odd = _unpack_hi_u4_to_f16(k_packed, CONVERT)
-                qk = tl.dot(q_even, tl.trans(k_even)) + tl.dot(q_odd, tl.trans(k_odd))
+                qk = tl.dot(q_even, tl.trans(_unpack_lo_u4_to_f16(k_packed, CONVERT)))
+                qk = tl.dot(
+                    q_odd, tl.trans(_unpack_hi_u4_to_f16(k_packed, CONVERT)), acc=qk
+                )
                 qk = (qk - q_sum[:, None] * k_zp[None, :]) * (k_scale * sm_scale_rot)[
                     None, :
                 ]
@@ -637,15 +660,21 @@ def _fwd_extend_kernel_int4_fallback(
                 p_v = (p * (v_scale / v_scale_max)[None, :]).to(tl.float16)
                 pv_zp_sum = tl.sum(p_v.to(tl.float32) * v_zp[None, :], axis=1)
 
-                v_even = _unpack_lo_u4_to_f16(v_packed, CONVERT)
-                v_odd = _unpack_hi_u4_to_f16(v_packed, CONVERT)
                 acc_even = (
                     acc_even * re_scale[:, None]
-                    + (tl.dot(p_v, v_even) - pv_zp_sum[:, None]) * v_scale_max
+                    + (
+                        tl.dot(p_v, _unpack_lo_u4_to_f16(v_packed, CONVERT))
+                        - pv_zp_sum[:, None]
+                    )
+                    * v_scale_max
                 )
                 acc_odd = (
                     acc_odd * re_scale[:, None]
-                    + (tl.dot(p_v, v_odd) - pv_zp_sum[:, None]) * v_scale_max
+                    + (
+                        tl.dot(p_v, _unpack_hi_u4_to_f16(v_packed, CONVERT))
+                        - pv_zp_sum[:, None]
+                    )
+                    * v_scale_max
                 )
                 e_max = n_e_max
 
@@ -800,6 +829,7 @@ def extend_attention_fwd_int4(
     block_n_prefix: Optional[int] = None,
     num_warps: Optional[int] = None,
     num_stages: Optional[int] = None,
+    prefix_stages: Optional[int] = None,
     convert: str = "magic",
 ) -> None:
     """2-stage extend attention: fused INT4 prefix + unquantized BF16/FP16 current chunk."""
@@ -831,12 +861,15 @@ def extend_attention_fwd_int4(
         else "cast"
     )
 
-    def_m, def_n, def_warps, def_stages = _default_extend_tile_regular_int4(max(Lq, Lv))
+    def_m, def_n, def_n_prefix, def_warps, def_stages, def_prefix_stages = (
+        _default_extend_tile_regular_int4(max(Lq, Lv))
+    )
     BLOCK_M = def_m if block_m is None else block_m
     BLOCK_N = def_n if block_n is None else block_n
-    BLOCK_N_PREFIX = BLOCK_N if block_n_prefix is None else block_n_prefix
+    BLOCK_N_PREFIX = def_n_prefix if block_n_prefix is None else block_n_prefix
     warps = def_warps if num_warps is None else num_warps
     stages = def_stages if num_stages is None else num_stages
+    p_stages = def_prefix_stages if prefix_stages is None else prefix_stages
 
     grid = (batch_size, head_num, triton.cdiv(max_len_extend, BLOCK_M))
     fused_rht = (
@@ -903,6 +936,7 @@ def extend_attention_fwd_int4(
             BLOCK_M=BLOCK_M,
             BLOCK_N=BLOCK_N,
             BLOCK_N_PREFIX=BLOCK_N_PREFIX,
+            PREFIX_STAGES=p_stages,
             USE_CUSTOM_MASK=custom_mask is not None,
             IS_CAUSAL=is_causal,
             SKIP_PREFIX_CUSTOM_MASK=skip_prefix_custom_mask,
@@ -1164,9 +1198,10 @@ def _fwd_extend_unified_kernel_int4(
             k_zp = (ks_bits & 0xF).to(tl.float32)
             k_scale = (ks_bits & -16).to(tl.float32, bitcast=True)
 
-            k_even = _unpack_lo_u4_to_f16(k_packed, CONVERT)
-            k_odd = _unpack_hi_u4_to_f16(k_packed, CONVERT)
-            qk = tl.dot(q_even, tl.trans(k_even)) + tl.dot(q_odd, tl.trans(k_odd))
+            qk = tl.dot(q_even, tl.trans(_unpack_lo_u4_to_f16(k_packed, CONVERT)))
+            qk = tl.dot(
+                q_odd, tl.trans(_unpack_hi_u4_to_f16(k_packed, CONVERT)), acc=qk
+            )
             qk = (qk - q_sum[:, None] * k_zp[None, :]) * (k_scale * sm_scale_rot)[
                 None, :
             ]
@@ -1210,15 +1245,21 @@ def _fwd_extend_unified_kernel_int4(
             p_v = ((p * v_scale[None, :]) / v_scale_max[:, None]).to(tl.float16)
             pv_zp_sum = tl.sum(p_v.to(tl.float32) * v_zp[None, :], axis=1)
 
-            v_even = _unpack_lo_u4_to_f16(v_packed, CONVERT)
-            v_odd = _unpack_hi_u4_to_f16(v_packed, CONVERT)
             acc_even = (
                 acc_even * re_scale[:, None]
-                + (tl.dot(p_v, v_even) - pv_zp_sum[:, None]) * v_scale_max[:, None]
+                + (
+                    tl.dot(p_v, _unpack_lo_u4_to_f16(v_packed, CONVERT))
+                    - pv_zp_sum[:, None]
+                )
+                * v_scale_max[:, None]
             )
             acc_odd = (
                 acc_odd * re_scale[:, None]
-                + (tl.dot(p_v, v_odd) - pv_zp_sum[:, None]) * v_scale_max[:, None]
+                + (
+                    tl.dot(p_v, _unpack_hi_u4_to_f16(v_packed, CONVERT))
+                    - pv_zp_sum[:, None]
+                )
+                * v_scale_max[:, None]
             )
             e_max = n_e_max
     else:
@@ -1281,9 +1322,10 @@ def _fwd_extend_unified_kernel_int4(
                 k_zp = (ks_bits & 0xF).to(tl.float32)
                 k_scale = (ks_bits & -16).to(tl.float32, bitcast=True)
 
-                k_even = _unpack_lo_u4_to_f16(k_packed, CONVERT)
-                k_odd = _unpack_hi_u4_to_f16(k_packed, CONVERT)
-                qk = tl.dot(q_even, tl.trans(k_even)) + tl.dot(q_odd, tl.trans(k_odd))
+                qk = tl.dot(q_even, tl.trans(_unpack_lo_u4_to_f16(k_packed, CONVERT)))
+                qk = tl.dot(
+                    q_odd, tl.trans(_unpack_hi_u4_to_f16(k_packed, CONVERT)), acc=qk
+                )
                 qk = (qk - q_sum[:, None] * k_zp[None, :]) * (k_scale * sm_scale_rot)[
                     None, :
                 ]
@@ -1318,15 +1360,21 @@ def _fwd_extend_unified_kernel_int4(
                 p_v = ((p * v_scale[None, :]) / v_scale_max[:, None]).to(tl.float16)
                 pv_zp_sum = tl.sum(p_v.to(tl.float32) * v_zp[None, :], axis=1)
 
-                v_even = _unpack_lo_u4_to_f16(v_packed, CONVERT)
-                v_odd = _unpack_hi_u4_to_f16(v_packed, CONVERT)
                 acc_even = (
                     acc_even * re_scale[:, None]
-                    + (tl.dot(p_v, v_even) - pv_zp_sum[:, None]) * v_scale_max[:, None]
+                    + (
+                        tl.dot(p_v, _unpack_lo_u4_to_f16(v_packed, CONVERT))
+                        - pv_zp_sum[:, None]
+                    )
+                    * v_scale_max[:, None]
                 )
                 acc_odd = (
                     acc_odd * re_scale[:, None]
-                    + (tl.dot(p_v, v_odd) - pv_zp_sum[:, None]) * v_scale_max[:, None]
+                    + (
+                        tl.dot(p_v, _unpack_hi_u4_to_f16(v_packed, CONVERT))
+                        - pv_zp_sum[:, None]
+                    )
+                    * v_scale_max[:, None]
                 )
                 e_max = n_e_max
 
@@ -1357,7 +1405,7 @@ def _fwd_extend_unified_kernel_int4(
         m_odd_v = tl.load(
             M_Odd_V + offs_dv[:, None] * BLOCK_PACKED_DV + offs_pv[None, :]
         )
-        out += tl.dot(oo_f16, tl.trans(m_odd_v), out_dtype=tl.float32)
+        out = tl.dot(oo_f16, tl.trans(m_odd_v), acc=out, out_dtype=tl.float32)
         out = out * (row_max_o[:, None] * INV_RHT_NORM_V)
         tl.store(
             O + o_row_base + offs_dv[None, :],

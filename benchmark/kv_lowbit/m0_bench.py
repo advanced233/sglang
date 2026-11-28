@@ -645,7 +645,7 @@ def run_sweep(session, *, group, config):
         if ctx is None:
             return
         _sweep(session, ctx=ctx, group=group, config=config)
-        if group not in ("main", "m3b"):
+        if group not in ("main", "m3b", "m4"):
             return
         if config in DECODE_PROBE_CONFIGS:
             _decode_probe(

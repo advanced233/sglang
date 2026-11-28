@@ -36,7 +36,6 @@ Example:
 import argparse
 import json
 import os
-import statistics
 import sys
 import time
 import traceback
@@ -58,12 +57,17 @@ DEFAULT_SHAPES = {
     "fresh-prefill": dict(batch=4, prefix=0, extend=4096),
 }
 
-KERNEL_IMPLS = (
+DEFAULT_KERNEL_IMPLS = (
     "bf16-regular",
     "bf16-unified",
     "int8-m3b-gather",
     "int8-fused-regular",
     "int8-fused-unified",
+)
+
+KERNEL_IMPLS = DEFAULT_KERNEL_IMPLS + (
+    "int4-fused-regular",
+    "int4-fused-unified",
 )
 
 # (block_m, block_n, num_warps, num_stages, convert)
@@ -79,6 +83,30 @@ SWEEP_TILES = (
     (64, 64, 4, 1, "cast"),
     (128, 64, 8, 1, "cast"),
 )
+
+# (block_m, block_n, block_n_prefix, num_warps, num_stages, prefix_stages, convert)
+INT4_REGULAR_SWEEP_TILES = (
+    (64, 128, 64, 4, 1, 2, "magic"),
+    (64, 128, 64, 4, 1, 1, "magic"),
+    (64, 128, 128, 4, 1, 1, "magic"),
+    (64, 128, 128, 4, 1, 2, "magic"),
+    (64, 64, 64, 4, 2, 2, "magic"),
+    (64, 64, 64, 4, 1, 2, "magic"),
+    (64, 128, 64, 4, 1, 2, "cast"),
+    (128, 64, 64, 4, 1, 2, "magic"),
+    (128, 64, 64, 8, 1, 2, "magic"),
+)
+
+# (block_m, block_n, num_warps, num_stages, convert)
+INT4_UNIFIED_SWEEP_TILES = (
+    (64, 64, 4, 2, "magic"),
+    (64, 64, 4, 1, "magic"),
+    (64, 128, 4, 1, "magic"),
+    (64, 128, 4, 2, "magic"),
+    (64, 64, 4, 2, "cast"),
+)
+
+DEFAULT_KL_CONFIGS = ("int8-chunk-bf16", "int8-chunk-q", "int8-det", "bf16-det")
 
 KL_CONFIGS = {
     "int8-chunk-bf16": (
@@ -125,6 +153,40 @@ KL_CONFIGS = {
         ],
         {},
     ),
+    "int4-chunk-bf16": (
+        [
+            "--attention-backend",
+            "triton",
+            "--kv-cache-dtype",
+            "int4_per_token_head",
+            "--sampling-backend",
+            "pytorch",
+        ],
+        {},
+    ),
+    "int4-chunk-q": (
+        [
+            "--attention-backend",
+            "triton",
+            "--kv-cache-dtype",
+            "int4_per_token_head",
+            "--sampling-backend",
+            "pytorch",
+        ],
+        {"SGLANG_ENABLE_TRITON_INT4_UNIFIED_EXTEND": "1"},
+    ),
+    "int4-det": (
+        [
+            "--attention-backend",
+            "triton",
+            "--kv-cache-dtype",
+            "int4_per_token_head",
+            "--sampling-backend",
+            "pytorch",
+            "--enable-deterministic-inference",
+        ],
+        {},
+    ),
 }
 
 
@@ -138,7 +200,7 @@ def _parse_args():
     pk.add_argument("--gpu", type=int, required=True)
     pk.add_argument("--out", type=Path, required=True)
     pk.add_argument("--shapes", default=",".join(DEFAULT_SHAPES))
-    pk.add_argument("--impls", default=",".join(KERNEL_IMPLS))
+    pk.add_argument("--impls", default=",".join(DEFAULT_KERNEL_IMPLS))
     pk.add_argument("--num-q-heads", type=int, default=32)
     pk.add_argument("--num-kv-heads", type=int, default=8)
     pk.add_argument("--head-dim", type=int, default=128)
@@ -148,7 +210,7 @@ def _parse_args():
     pk.add_argument(
         "--sweep",
         action="store_true",
-        help="Also sweep (BLOCK_M, BLOCK_N, warps, stages, convert) tiles for fused INT8 extend.",
+        help="Also sweep tile configurations for selected fused INT8/INT4 extend impls.",
     )
     pk.add_argument(
         "--sweep-shapes",
@@ -160,7 +222,7 @@ def _parse_args():
     pl.add_argument("--model", required=True)
     pl.add_argument("--gpu", type=int, required=True)
     pl.add_argument("--out", type=Path, required=True)
-    pl.add_argument("--configs", default=",".join(KL_CONFIGS))
+    pl.add_argument("--configs", default=",".join(DEFAULT_KL_CONFIGS))
     pl.add_argument("--samples", type=int, default=32)
     pl.add_argument("--prompt-len", type=int, default=1024)
     pl.add_argument("--max-new-tokens", type=int, default=512)
@@ -229,9 +291,17 @@ def _run_kernel_bench(args):
         extend_attention_fwd,
         extend_attention_fwd_unified,
     )
+    from sglang.kernels.ops.attention.extend_attention_int4 import (
+        extend_attention_fwd_int4,
+        extend_attention_fwd_unified_int4,
+    )
     from sglang.kernels.ops.attention.extend_attention_int8 import (
         extend_attention_fwd_int8,
         extend_attention_fwd_unified_int8,
+    )
+    from sglang.kernels.ops.kvcache.int4_per_token_head import (
+        dequant_int4_per_token_head,
+        store_int4_per_token_head_kv,
     )
     from sglang.kernels.ops.kvcache.int8_per_token_head import (
         dequant_int8_per_token_head,
@@ -259,6 +329,9 @@ def _run_kernel_bench(args):
     for impl in impls:
         if impl not in KERNEL_IMPLS:
             raise SystemExit(f"unknown impl {impl!r}; choose from {list(KERNEL_IMPLS)}")
+
+    need_int8 = any(x.startswith("int8-") for x in impls)
+    need_int4 = any(x.startswith("int4-") for x in impls)
 
     dev = torch.device("cuda")
     hq, hkv, d = args.num_q_heads, args.num_kv_heads, args.head_dim
@@ -331,25 +404,7 @@ def _run_kernel_bench(args):
             k_buf_bf16[1:] = k_all
             v_buf_bf16[1:] = v_all
 
-            # INT8 pool via M2 write kernel
-            k_buf_i8 = torch.zeros(pool_slots, hkv, d, dtype=torch.int8, device=dev)
-            v_buf_i8 = torch.zeros_like(k_buf_i8)
-            k_scale = torch.zeros(pool_slots, hkv, dtype=torch.float32, device=dev)
-            v_scale = torch.zeros_like(k_scale)
-            store_int8_per_token_head_kv(
-                k=k_all,
-                v=v_all,
-                loc=unified_kv_indices,
-                k_cache=k_buf_i8,
-                v_cache=v_buf_i8,
-                k_scale=k_scale,
-                v_scale=v_scale,
-            )
-
-            # fp32 references:
-            # 1) ref_bf16: exact BF16 K/V
-            # 2) ref_chunk_bf16: dequantized INT8 prefix + BF16 chunk
-            # 3) ref_chunk_q: dequantized INT8 prefix + dequantized INT8 chunk
+            # fp32 exact BF16 reference
             ref_bf16 = _chunked_reference_extend(
                 q=q,
                 k_all=k_all,
@@ -360,34 +415,124 @@ def _run_kernel_bench(args):
                 num_q_heads=hq,
                 num_kv_heads=hkv,
             )
-            k_deq_all = k_buf_i8[1:].float() * k_scale[1:, :, None]
-            v_deq_all = v_buf_i8[1:].float() * v_scale[1:, :, None]
-            ref_chunk_q = _chunked_reference_extend(
-                q=q,
-                k_all=k_deq_all,
-                v_all=v_deq_all,
-                batch=batch,
-                prefix=prefix,
-                extend=extend,
-                num_q_heads=hq,
-                num_kv_heads=hkv,
-            )
-            k_mix = k_4d.float().clone()
-            v_mix = v_4d.float().clone()
-            if prefix > 0:
-                k_mix[:, :prefix] = k_deq_all.view(batch, total_kv, hkv, d)[:, :prefix]
-                v_mix[:, :prefix] = v_deq_all.view(batch, total_kv, hkv, d)[:, :prefix]
-            ref_chunk_bf16 = _chunked_reference_extend(
-                q=q,
-                k_all=k_mix.reshape(batch * total_kv, hkv, d),
-                v_all=v_mix.reshape(batch * total_kv, hkv, d),
-                batch=batch,
-                prefix=prefix,
-                extend=extend,
-                num_q_heads=hq,
-                num_kv_heads=hkv,
-            )
-            del k_deq_all, v_deq_all, k_mix, v_mix
+
+            # INT8 pool + fp32 references (if requested)
+            k_buf_i8 = v_buf_i8 = k_scale = v_scale = None
+            ref_chunk_bf16 = ref_chunk_q = None
+            if need_int8:
+                k_buf_i8 = torch.zeros(pool_slots, hkv, d, dtype=torch.int8, device=dev)
+                v_buf_i8 = torch.zeros_like(k_buf_i8)
+                k_scale = torch.zeros(pool_slots, hkv, dtype=torch.float32, device=dev)
+                v_scale = torch.zeros_like(k_scale)
+                store_int8_per_token_head_kv(
+                    k=k_all,
+                    v=v_all,
+                    loc=unified_kv_indices,
+                    k_cache=k_buf_i8,
+                    v_cache=v_buf_i8,
+                    k_scale=k_scale,
+                    v_scale=v_scale,
+                )
+                k_deq_all = k_buf_i8[1:].float() * k_scale[1:, :, None]
+                v_deq_all = v_buf_i8[1:].float() * v_scale[1:, :, None]
+                ref_chunk_q = _chunked_reference_extend(
+                    q=q,
+                    k_all=k_deq_all,
+                    v_all=v_deq_all,
+                    batch=batch,
+                    prefix=prefix,
+                    extend=extend,
+                    num_q_heads=hq,
+                    num_kv_heads=hkv,
+                )
+                k_mix = k_4d.float().clone()
+                v_mix = v_4d.float().clone()
+                if prefix > 0:
+                    k_mix[:, :prefix] = k_deq_all.view(batch, total_kv, hkv, d)[
+                        :, :prefix
+                    ]
+                    v_mix[:, :prefix] = v_deq_all.view(batch, total_kv, hkv, d)[
+                        :, :prefix
+                    ]
+                ref_chunk_bf16 = _chunked_reference_extend(
+                    q=q,
+                    k_all=k_mix.reshape(batch * total_kv, hkv, d),
+                    v_all=v_mix.reshape(batch * total_kv, hkv, d),
+                    batch=batch,
+                    prefix=prefix,
+                    extend=extend,
+                    num_q_heads=hq,
+                    num_kv_heads=hkv,
+                )
+                del k_deq_all, v_deq_all, k_mix, v_mix
+
+            # INT4 (+RHT) pool + fp32 references (if requested)
+            k_buf_i4 = v_buf_i4 = k_scale_i4 = v_scale_i4 = None
+            ref_int4_chunk_bf16 = ref_int4_chunk_q = None
+            if need_int4:
+                k_buf_i4 = torch.zeros(
+                    pool_slots, hkv, d // 2, dtype=torch.uint8, device=dev
+                )
+                v_buf_i4 = torch.zeros_like(k_buf_i4)
+                k_scale_i4 = torch.zeros(
+                    pool_slots, hkv, dtype=torch.float32, device=dev
+                )
+                v_scale_i4 = torch.zeros_like(k_scale_i4)
+                store_int4_per_token_head_kv(
+                    k=k_all,
+                    v=v_all,
+                    loc=unified_kv_indices,
+                    k_cache=k_buf_i4,
+                    v_cache=v_buf_i4,
+                    k_scale=k_scale_i4,
+                    v_scale=v_scale_i4,
+                    use_rht=True,
+                )
+                k_deq4 = dequant_int4_per_token_head(
+                    data=k_buf_i4,
+                    scale=k_scale_i4,
+                    dtype=torch.float32,
+                    slots=unified_kv_indices,
+                    use_rht=True,
+                )
+                v_deq4 = dequant_int4_per_token_head(
+                    data=v_buf_i4,
+                    scale=v_scale_i4,
+                    dtype=torch.float32,
+                    slots=unified_kv_indices,
+                    use_rht=True,
+                )
+                ref_int4_chunk_q = _chunked_reference_extend(
+                    q=q,
+                    k_all=k_deq4,
+                    v_all=v_deq4,
+                    batch=batch,
+                    prefix=prefix,
+                    extend=extend,
+                    num_q_heads=hq,
+                    num_kv_heads=hkv,
+                )
+                k_mix4 = k_4d.float().clone()
+                v_mix4 = v_4d.float().clone()
+                if prefix > 0:
+                    k_mix4[:, :prefix] = k_deq4.view(batch, total_kv, hkv, d)[
+                        :, :prefix
+                    ]
+                    v_mix4[:, :prefix] = v_deq4.view(batch, total_kv, hkv, d)[
+                        :, :prefix
+                    ]
+                ref_int4_chunk_bf16 = _chunked_reference_extend(
+                    q=q,
+                    k_all=k_mix4.reshape(batch * total_kv, hkv, d),
+                    v_all=v_mix4.reshape(batch * total_kv, hkv, d),
+                    batch=batch,
+                    prefix=prefix,
+                    extend=extend,
+                    num_q_heads=hq,
+                    num_kv_heads=hkv,
+                )
+                del k_deq4, v_deq4, k_mix4, v_mix4
+
             torch.cuda.empty_cache()
 
             for impl in impls:
@@ -524,6 +669,51 @@ def _run_kernel_bench(args):
                             is_causal=True,
                         )
 
+                elif impl == "int4-fused-regular":
+                    ref_exact = ref_int4_chunk_bf16
+
+                    def op():
+                        extend_attention_fwd_int4(
+                            q_extend=q,
+                            k_extend=k_extend,
+                            v_extend=v_extend,
+                            o_extend=out,
+                            k_buffer=k_buf_i4,
+                            v_buffer=v_buf_i4,
+                            k_scale_buffer=k_scale_i4,
+                            v_scale_buffer=v_scale_i4,
+                            qo_indptr=qo_indptr,
+                            kv_indptr=prefix_kv_indptr,
+                            kv_indices=prefix_kv_indices,
+                            custom_mask=None,
+                            is_causal=True,
+                            mask_indptr=None,
+                            max_len_extend=extend,
+                            sm_scale=sm_scale,
+                            use_rht=True,
+                        )
+
+                elif impl == "int4-fused-unified":
+                    ref_exact = ref_int4_chunk_q
+
+                    def op():
+                        extend_attention_fwd_unified_int4(
+                            q=q,
+                            o=out,
+                            k_buffer=k_buf_i4,
+                            v_buffer=v_buf_i4,
+                            k_scale_buffer=k_scale_i4,
+                            v_scale_buffer=v_scale_i4,
+                            qo_indptr=qo_indptr,
+                            kv_indptr=unified_kv_indptr,
+                            kv_indices=unified_kv_indices,
+                            prefix_lens=prefix_lens,
+                            max_len_extend=extend,
+                            sm_scale=sm_scale,
+                            is_causal=True,
+                            use_rht=True,
+                        )
+
                 # Warmup (compile Triton kernels before measuring memory or time).
                 op()
                 torch.cuda.synchronize()
@@ -586,16 +776,39 @@ def _run_kernel_bench(args):
                 sweep_impls = [
                     x
                     for x in impls
-                    if x in ("int8-fused-regular", "int8-fused-unified")
+                    if x
+                    in (
+                        "int8-fused-regular",
+                        "int8-fused-unified",
+                        "int4-fused-regular",
+                        "int4-fused-unified",
+                    )
                 ]
                 with open(sweep_path, "a") as sweep_f:
                     for s_impl in sweep_impls:
-                        ref_exact = (
-                            ref_chunk_bf16
-                            if s_impl == "int8-fused-regular"
-                            else ref_chunk_q
-                        )
-                        for bm, bn, warps, stages, conv in SWEEP_TILES:
+                        if s_impl == "int8-fused-regular":
+                            ref_exact = ref_chunk_bf16
+                            tile_specs = [
+                                (bm, bn, None, w, s, None, c)
+                                for bm, bn, w, s, c in SWEEP_TILES
+                            ]
+                        elif s_impl == "int8-fused-unified":
+                            ref_exact = ref_chunk_q
+                            tile_specs = [
+                                (bm, bn, None, w, s, None, c)
+                                for bm, bn, w, s, c in SWEEP_TILES
+                            ]
+                        elif s_impl == "int4-fused-regular":
+                            ref_exact = ref_int4_chunk_bf16
+                            tile_specs = list(INT4_REGULAR_SWEEP_TILES)
+                        else:
+                            ref_exact = ref_int4_chunk_q
+                            tile_specs = [
+                                (bm, bn, None, w, s, None, c)
+                                for bm, bn, w, s, c in INT4_UNIFIED_SWEEP_TILES
+                            ]
+
+                        for bm, bn, bn_p, warps, stages, p_stages, conv in tile_specs:
                             out_s = torch.empty_like(q)
                             row_base = {
                                 "shape": shape_name,
@@ -605,8 +818,10 @@ def _run_kernel_bench(args):
                                 "impl": s_impl,
                                 "block_m": bm,
                                 "block_n": bn,
+                                "block_n_prefix": bn_p,
                                 "num_warps": warps,
                                 "num_stages": stages,
+                                "prefix_stages": p_stages,
                                 "convert": conv,
                             }
                             try:
@@ -644,7 +859,7 @@ def _run_kernel_bench(args):
                                             convert=conv,
                                         )
 
-                                else:
+                                elif s_impl == "int8-fused-unified":
 
                                     def s_op(
                                         bm=bm,
@@ -668,6 +883,77 @@ def _run_kernel_bench(args):
                                             max_len_extend=extend,
                                             sm_scale=sm_scale,
                                             is_causal=True,
+                                            block_m=bm,
+                                            block_n=bn,
+                                            num_warps=warps,
+                                            num_stages=stages,
+                                            convert=conv,
+                                        )
+
+                                elif s_impl == "int4-fused-regular":
+
+                                    def s_op(
+                                        bm=bm,
+                                        bn=bn,
+                                        bn_p=bn_p,
+                                        warps=warps,
+                                        stages=stages,
+                                        p_stages=p_stages,
+                                        conv=conv,
+                                        out_s=out_s,
+                                    ):
+                                        extend_attention_fwd_int4(
+                                            q_extend=q,
+                                            k_extend=k_extend,
+                                            v_extend=v_extend,
+                                            o_extend=out_s,
+                                            k_buffer=k_buf_i4,
+                                            v_buffer=v_buf_i4,
+                                            k_scale_buffer=k_scale_i4,
+                                            v_scale_buffer=v_scale_i4,
+                                            qo_indptr=qo_indptr,
+                                            kv_indptr=prefix_kv_indptr,
+                                            kv_indices=prefix_kv_indices,
+                                            custom_mask=None,
+                                            is_causal=True,
+                                            mask_indptr=None,
+                                            max_len_extend=extend,
+                                            sm_scale=sm_scale,
+                                            use_rht=True,
+                                            block_m=bm,
+                                            block_n=bn,
+                                            block_n_prefix=bn_p,
+                                            num_warps=warps,
+                                            num_stages=stages,
+                                            prefix_stages=p_stages,
+                                            convert=conv,
+                                        )
+
+                                else:
+
+                                    def s_op(
+                                        bm=bm,
+                                        bn=bn,
+                                        warps=warps,
+                                        stages=stages,
+                                        conv=conv,
+                                        out_s=out_s,
+                                    ):
+                                        extend_attention_fwd_unified_int4(
+                                            q=q,
+                                            o=out_s,
+                                            k_buffer=k_buf_i4,
+                                            v_buffer=v_buf_i4,
+                                            k_scale_buffer=k_scale_i4,
+                                            v_scale_buffer=v_scale_i4,
+                                            qo_indptr=qo_indptr,
+                                            kv_indptr=unified_kv_indptr,
+                                            kv_indices=unified_kv_indices,
+                                            prefix_lens=prefix_lens,
+                                            max_len_extend=extend,
+                                            sm_scale=sm_scale,
+                                            is_causal=True,
+                                            use_rht=True,
                                             block_m=bm,
                                             block_n=bn,
                                             num_warps=warps,
@@ -700,22 +986,11 @@ def _run_kernel_bench(args):
                             sweep_f.flush()
                             print(json.dumps(s_row), flush=True)
 
-            del (
-                q,
-                k_all,
-                v_all,
-                k_extend,
-                v_extend,
-                k_buf_bf16,
-                v_buf_bf16,
-                k_buf_i8,
-                v_buf_i8,
-                k_scale,
-                v_scale,
-                ref_bf16,
-                ref_chunk_bf16,
-                ref_chunk_q,
-            )
+            q = k_all = v_all = k_extend = v_extend = None
+            k_buf_bf16 = v_buf_bf16 = k_buf_i8 = v_buf_i8 = None
+            k_scale = v_scale = k_buf_i4 = v_buf_i4 = k_scale_i4 = v_scale_i4 = None
+            ref_bf16 = ref_chunk_bf16 = ref_chunk_q = None
+            ref_int4_chunk_bf16 = ref_int4_chunk_q = None
             torch.cuda.empty_cache()
 
     _write_report(args.out)
@@ -1065,9 +1340,7 @@ def _run_kl_eval(args):
             t0 = time.time()
             try:
                 ready = srv.wait_ready(port=port, timeout_s=args.ready_timeout)
-                info = m0_bench._parse_server_log(
-                    engine="sglang", text=srv.log_text()
-                )
+                info = m0_bench._parse_server_log(engine="sglang", text=srv.log_text())
                 srv_row = {
                     "kind": "server",
                     "config": name,
@@ -1198,9 +1471,19 @@ def _write_report(out_dir: Path):
                     grows, key=lambda r: r.get("median_ms", float("inf"))
                 )
                 for r in grows_sorted:
+                    n_str = (
+                        f"{r['block_n']}(p{r['block_n_prefix']})"
+                        if r.get("block_n_prefix") is not None
+                        else f"{r['block_n']}"
+                    )
+                    s_str = (
+                        f"{r['num_stages']}(ps={r['prefix_stages']})"
+                        if r.get("prefix_stages") is not None
+                        else f"{r['num_stages']}"
+                    )
                     tile_lbl = (
-                        f"`{r['block_m']}×{r['block_n']}, "
-                        f"w={r['num_warps']}, s={r['num_stages']}, {r['convert']}`"
+                        f"`{r['block_m']}×{n_str}, "
+                        f"w={r['num_warps']}, s={s_str}, {r['convert']}`"
                     )
                     if "error" in r:
                         lines.append(
@@ -1233,7 +1516,9 @@ def _write_report(out_dir: Path):
 
         if srv_rows:
             lines.append("## Server Startup & KV Capacity\n")
-            lines.append("| Config | Ready | Ready s | KV Capacity (tokens) | mem_frac |")
+            lines.append(
+                "| Config | Ready | Ready s | KV Capacity (tokens) | mem_frac |"
+            )
             lines.append("|---|---:|---:|---:|---:|")
             for r in srv_rows:
                 lines.append(

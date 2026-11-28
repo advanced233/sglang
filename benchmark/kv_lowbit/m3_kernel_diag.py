@@ -82,7 +82,7 @@ CONFIGS = {
     "sglang-bf16": Config(impl="sglang", kv="bf16"),
     "sglang-fp8e5m2": Config(impl="sglang", kv="fp8_e5m2"),
     "sglang-int8": Config(impl="sglang", kv="int8"),
-    "sglang-int4": Config(impl="sglang", kv="int4"),
+    "sglang-int4": Config(impl="sglang", kv="int4", block_n=256, num_stages=2),
     "vllm-bf16": Config(impl="vllm", kv="bf16"),
     "vllm-bf16-t32": Config(impl="vllm", kv="bf16", decode_tile=32),
     "vllm-int8": Config(impl="vllm", kv="int8"),

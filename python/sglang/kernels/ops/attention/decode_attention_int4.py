@@ -239,9 +239,10 @@ def _fwd_grouped_kernel_stage1_int4(
             k_zp = (ks_bits & 0xF).to(tl.float32)
             k_scale = (ks_bits & -16).to(tl.float32, bitcast=True)
 
-            k_even = _unpack_lo_u4_to_f16(k_packed, CONVERT)
-            k_odd = _unpack_hi_u4_to_f16(k_packed, CONVERT)
-            qk = tl.dot(q_even, tl.trans(k_even)) + tl.dot(q_odd, tl.trans(k_odd))
+            qk = tl.dot(q_even, tl.trans(_unpack_lo_u4_to_f16(k_packed, CONVERT)))
+            qk = tl.dot(
+                q_odd, tl.trans(_unpack_hi_u4_to_f16(k_packed, CONVERT)), acc=qk
+            )
             qk = (qk - q_sum[:, None] * k_zp[None, :]) * (k_scale * sm_scale_rot)[
                 None, :
             ]
@@ -273,15 +274,21 @@ def _fwd_grouped_kernel_stage1_int4(
             p_v = (p * (v_scale / v_scale_max)[None, :]).to(tl.float16)
             pv_zp_sum = tl.sum(p_v.to(tl.float32) * v_zp[None, :], axis=1)
 
-            v_even = _unpack_lo_u4_to_f16(v_packed, CONVERT)
-            v_odd = _unpack_hi_u4_to_f16(v_packed, CONVERT)
             acc_even = (
                 acc_even * re_scale[:, None]
-                + (tl.dot(p_v, v_even) - pv_zp_sum[:, None]) * v_scale_max
+                + (
+                    tl.dot(p_v, _unpack_lo_u4_to_f16(v_packed, CONVERT))
+                    - pv_zp_sum[:, None]
+                )
+                * v_scale_max
             )
             acc_odd = (
                 acc_odd * re_scale[:, None]
-                + (tl.dot(p_v, v_odd) - pv_zp_sum[:, None]) * v_scale_max
+                + (
+                    tl.dot(p_v, _unpack_hi_u4_to_f16(v_packed, CONVERT))
+                    - pv_zp_sum[:, None]
+                )
+                * v_scale_max
             )
 
             e_sum = e_sum * re_scale + tl.sum(p, 1)
@@ -415,7 +422,7 @@ def _fwd_kernel_stage2_int4_rht(
     m_even = tl.load(M_Even_V + offs_dv[:, None] * PACKED_LV + offs_pv[None, :])
     out = tl.dot(oe_f16, tl.trans(m_even), out_dtype=tl.float32)
     m_odd = tl.load(M_Odd_V + offs_dv[:, None] * PACKED_LV + offs_pv[None, :])
-    out += tl.dot(oo_f16, tl.trans(m_odd), out_dtype=tl.float32)
+    out = tl.dot(oo_f16, tl.trans(m_odd), acc=out, out_dtype=tl.float32)
     out = out * (row_max[:, None] * INV_RHT_NORM_V)
 
     tl.store(
@@ -426,10 +433,11 @@ def _fwd_kernel_stage2_int4_rht(
 
 
 def _default_tile_int4(head_dim: int) -> tuple[int, int]:
-    # Packed INT4 uses half the bytes of INT8 per token (64 B vs 128 B at D=128),
-    # so 128 tokens x 3 stages takes only ~51 KB shared memory per CTA.
+    # Packed INT4 uses 64 B/token at D=128 (half of INT8), so 256 tokens x 2 stages
+    # matches INT8's 128-token tile footprint while halving loop iterations (measured
+    # fastest on A100: 141.3 us vs 146.4 us for 128x3).
     if head_dim <= 128:
-        return 128, 3
+        return 256, 2
     return 64, 2
 
 

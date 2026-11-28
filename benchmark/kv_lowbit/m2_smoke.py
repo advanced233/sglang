@@ -40,6 +40,7 @@ from m0_bench import (  # noqa: E402
 CONFIGS = {
     "bf16-triton": [],
     "int8-triton": ["--kv-cache-dtype", "int8_per_token_head"],
+    "int4-triton": ["--kv-cache-dtype", "int4_per_token_head"],
 }
 # Qwen3 non-thinking sampling recommendation; sgl-eval 0.1.3 has no --top-k flag.
 DEFAULT_EVAL_ARGS = (
@@ -232,7 +233,7 @@ def _fmt_ms(x):
 def write_summary(out):
     rows = [json.loads(x) for x in (out / "runs.jsonl").read_text().splitlines()]
     lines = [
-        "# Smoke: int8_per_token_head vs BF16 (Triton backend)",
+        "# Smoke: low-bit KV cache vs BF16 (Triton backend)",
         "",
         "| config | ready | KV dtype | KV tokens | KV B/token/layer | answer "
         "| probe ITL ms | GSM8K % | examples | eval |",
