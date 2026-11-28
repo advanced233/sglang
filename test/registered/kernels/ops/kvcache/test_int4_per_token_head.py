@@ -78,22 +78,46 @@ def test_store_scatters_and_matches_reference(head_dim, use_rht):
     untouched[loc] = False
     for x, data, scale in ((k, k_cache, k_scale), (v, v_cache, v_scale)):
         ref_packed, ref_scale = _ref_quantize_int4(x, use_rht=use_rht)
+        got_s, got_zp = unpack_scale_and_zp(scale[loc])
+        ref_s, ref_zp = unpack_scale_and_zp(ref_scale)
+        lo_got, hi_got = (data[loc] & 0xF).int(), ((data[loc] >> 4) & 0xF).int()
+        lo_ref, hi_ref = (ref_packed & 0xF).int(), ((ref_packed >> 4) & 0xF).int()
         if not use_rht:
-            assert torch.equal(data[loc], ref_packed)
-            assert torch.equal(
-                scale[loc].view(torch.int32), ref_scale.view(torch.int32)
-            )
+            # Triton's default `1.0 / scale` (rcp.approx) + FMA can differ by 1 ULP
+            # from PyTorch's IEEE div.rn + unfused mul/add, flipping at most rare
+            # exact half-integer (k + 0.5) tie boundaries by 1.
+            torch.testing.assert_close(got_s, ref_s, rtol=1e-5, atol=1e-7)
+            assert (got_zp - ref_zp).abs().max().item() <= 1.0
+
+            xf = x.float()
+            xmin = xf.amin(dim=-1)
+            xmax = xf.amax(dim=-1)
+            raw_scale = ((xmax - xmin) / 15.0).clamp_min(1e-6)
+            zp_mismatch = got_zp != ref_zp
+            if zp_mismatch.any():
+                z_raw = -xmin[zp_mismatch] / raw_scale[zp_mismatch]
+                z_dist = ((z_raw - z_raw.floor()) - 0.5).abs()
+                assert z_dist.max().item() < 1e-4, f"non-tie zp diff: {z_dist.max()}"
+
+            q_got = torch.stack([lo_got, hi_got], dim=-1).reshape_as(xf)
+            # Recompute expected q using the kernel's chosen zp so a 1-step zp tie
+            # flip doesn't mask real nibble bugs on that row.
+            q_val = xf * (1.0 / raw_scale[..., None]) + got_zp[..., None]
+            q_exp = _round_half_away(q_val).clamp(0.0, 15.0).int()
+            assert (q_got - q_exp).abs().max().item() <= 1
+            q_mismatch = q_got != q_exp
+            if q_mismatch.any():
+                q_dist = ((q_val[q_mismatch] - q_val[q_mismatch].floor()) - 0.5).abs()
+                assert q_dist.max().item() < 1e-4, f"non-tie q diff: {q_dist.max()}"
+            exact_rate = (q_got == q_exp).float().mean().item()
+            assert exact_rate > 0.995, f"exact nibble match rate too low: {exact_rate}"
         else:
             # GPU Tensor Core MMA vs CPU fp32 butterfly can differ by 1 ULP in fp32
             # before bf16 rounding, flipping at most rare tie-boundary nibbles by 1.
-            lo_got, hi_got = (data[loc] & 0xF).int(), ((data[loc] >> 4) & 0xF).int()
-            lo_ref, hi_ref = (ref_packed & 0xF).int(), ((ref_packed >> 4) & 0xF).int()
             assert (lo_got - lo_ref).abs().max().item() <= 1
             assert (hi_got - hi_ref).abs().max().item() <= 1
             exact_rate = (data[loc] == ref_packed).float().mean().item()
             assert exact_rate > 0.99, f"exact byte match rate too low: {exact_rate}"
-            got_s, got_zp = unpack_scale_and_zp(scale[loc])
-            ref_s, ref_zp = unpack_scale_and_zp(ref_scale)
             torch.testing.assert_close(got_s, ref_s, rtol=1e-2, atol=1e-5)
             assert (got_zp - ref_zp).abs().max().item() <= 1.0
         assert data[untouched].eq(0).all() and scale[untouched].eq(0).all()

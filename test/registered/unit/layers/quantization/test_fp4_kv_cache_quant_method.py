@@ -736,7 +736,8 @@ class TestInt4PerTokenHeadKVCacheMethod(CustomTestCase):
             [1e-6, 1e-5, 1e-3, 0.12345678, 1.0, 3.1415927, 1e4], dtype=torch.float32
         )
         zps = torch.arange(16, dtype=torch.int32)
-        s_grid, z_grid = torch.meshgrid(scales, zps, indexing="ij")
+        s_grid = scales[:, None].expand(len(scales), len(zps)).contiguous()
+        z_grid = zps[None, :].expand(len(scales), len(zps)).contiguous()
 
         packed = pack_scale_and_zp(s_grid, z_grid)
         self.assertTrue(torch.isfinite(packed).all())

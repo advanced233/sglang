@@ -916,19 +916,26 @@ def extend_attention_fwd_int4(
         return
 
     if use_rht:
-        q_in = (apply_rht(q_extend.float()) * inv_sqrt_rht_k).to(q_extend.dtype)
-        k_in = (apply_rht(k_extend.float()) * inv_sqrt_rht_k).to(k_extend.dtype)
-        v_in = apply_rht(v_extend.float()).to(v_extend.dtype)
+        # Keep rotated intermediates out of 7-bit bf16: the unnormalized RHT
+        # amplifies V/O magnitudes by sqrt(b), so truncating rotated Q/K/V/O to
+        # bf16 before inverse RHT adds ~2e-2 noise on non-power-of-two dims.
+        rot_dtype = (
+            torch.float16 if q_extend.dtype == torch.bfloat16 else q_extend.dtype
+        )
+        q_in = (apply_rht(q_extend.float()) * inv_sqrt_rht_k).to(rot_dtype)
+        k_in = (apply_rht(k_extend.float()) * inv_sqrt_rht_k).to(rot_dtype)
+        v_in = apply_rht(v_extend.float()).to(rot_dtype)
+        o_buf = torch.empty_like(o_extend, dtype=torch.float32)
         sm_scale_rot = sm_scale * inv_sqrt_rht_k
     else:
-        q_in, k_in, v_in = q_extend, k_extend, v_extend
+        q_in, k_in, v_in, o_buf = q_extend, k_extend, v_extend, o_extend
         sm_scale_rot = sm_scale
 
     _fwd_extend_kernel_int4_fallback[grid](
         q_in,
         k_in,
         v_in,
-        o_extend,
+        o_buf,
         k_buffer,
         v_buffer,
         k_scale_buffer,
@@ -949,8 +956,8 @@ def extend_attention_fwd_int4(
         k_in.stride(1),
         v_in.stride(0),
         v_in.stride(1),
-        o_extend.stride(0),
-        o_extend.stride(1),
+        o_buf.stride(0),
+        o_buf.stride(1),
         k_buffer.stride(0),
         k_buffer.stride(1),
         v_buffer.stride(0),
@@ -978,9 +985,7 @@ def extend_attention_fwd_int4(
         num_stages=stages,
     )
     if use_rht:
-        o_extend.copy_(
-            apply_rht(o_extend.float(), inverse=True, out_dtype=o_extend.dtype)
-        )
+        o_extend.copy_(apply_rht(o_buf, inverse=True, out_dtype=o_extend.dtype))
 
 
 @triton.jit
@@ -1446,17 +1451,21 @@ def extend_attention_fwd_unified_int4(
             q_in = q
             m_even_k, m_odd_k = get_rht_split_matrices(Lq, q.dtype, q.device)
         else:
-            q_in = (apply_rht(q.float()) * inv_sqrt_rht_k).to(q.dtype)
+            rot_q_dtype = torch.float16 if q.dtype == torch.bfloat16 else q.dtype
+            q_in = (apply_rht(q.float()) * inv_sqrt_rht_k).to(rot_q_dtype)
             m_even_k = m_odd_k = q_in
         if fused_rht_v:
+            o_buf = o
             m_even_v, m_odd_v = get_rht_split_matrices(Lv, torch.float16, o.device)
         else:
-            m_even_v = m_odd_v = o
+            o_buf = torch.empty_like(o, dtype=torch.float32)
+            m_even_v = m_odd_v = o_buf
     else:
         sm_scale_rot = sm_scale
         q_in = q
+        o_buf = o
         m_even_k = m_odd_k = q_in
-        m_even_v = m_odd_v = o
+        m_even_v = m_odd_v = o_buf
 
     def_m, def_n, def_warps, def_stages = _default_extend_tile_unified_int4(max(Lq, Lv))
     BLOCK_M = def_m if block_m is None else block_m
@@ -1467,7 +1476,7 @@ def extend_attention_fwd_unified_int4(
     grid = (batch_size, head_num, triton.cdiv(max_len_extend, BLOCK_M))
     _fwd_extend_unified_kernel_int4[grid](
         q_in,
-        o,
+        o_buf,
         k_buffer,
         v_buffer,
         k_scale_buffer,
@@ -1488,8 +1497,8 @@ def extend_attention_fwd_unified_int4(
         kv_group_num,
         q_in.stride(0),
         q_in.stride(1),
-        o.stride(0),
-        o.stride(1),
+        o_buf.stride(0),
+        o_buf.stride(1),
         k_buffer.stride(0),
         k_buffer.stride(1),
         v_buffer.stride(0),
@@ -1520,4 +1529,4 @@ def extend_attention_fwd_unified_int4(
         num_stages=stages,
     )
     if use_rht and not fused_rht_v:
-        o.copy_(apply_rht(o.float(), inverse=True, out_dtype=o.dtype))
+        o.copy_(apply_rht(o_buf, inverse=True, out_dtype=o.dtype))

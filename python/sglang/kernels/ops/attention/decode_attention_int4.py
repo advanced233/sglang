@@ -505,8 +505,9 @@ def decode_attention_fwd_int4(
             q_in = q
             m_even_k, m_odd_k = get_rht_split_matrices(Lk, q.dtype, q.device)
         else:
-            # Normalize by 1/sqrt(b) so rotated Q matches original Q's dynamic range.
-            q_in = (apply_rht(q.float()) * inv_sqrt_rht_k).to(q.dtype)
+            # Normalize by 1/sqrt(b) and preserve 10-bit fp16 precision for Q.
+            rot_q_dtype = torch.float16 if q.dtype == torch.bfloat16 else q.dtype
+            q_in = (apply_rht(q.float()) * inv_sqrt_rht_k).to(rot_q_dtype)
             m_even_k = m_odd_k = q_in
     else:
         sm_scale_rot = sm_scale
@@ -595,19 +596,21 @@ def decode_attention_fwd_int4(
         )
         return
 
-    # Fallback Stage 2: pass v_buffer=o so _decode_softmax_reducev_fwd sees the
-    # unpacked head dim Lv rather than the packed dim Lv // 2.
+    # Fallback Stage 2: pass v_buffer=o_buf so _decode_softmax_reducev_fwd sees the
+    # unpacked head dim Lv rather than the packed dim Lv // 2, and keep rotated
+    # outputs in fp32 before inverse RHT to avoid bf16 truncation noise.
+    o_buf = torch.empty_like(o, dtype=torch.float32) if use_rht else o
     _decode_softmax_reducev_fwd(
         logits=attn_logits,
         lse=attn_lse,
         q=q_in,
-        o=o,
+        o=o_buf,
         v_scale=1.0,
-        v_buffer=o,
+        v_buffer=o_buf,
         kv_indptr=kv_indptr,
         num_kv_splits=num_kv_splits,
         max_kv_splits=max_kv_splits,
         sinks=sinks,
     )
     if use_rht:
-        o.copy_(apply_rht(o.float(), inverse=True, out_dtype=o.dtype))
+        o.copy_(apply_rht(o_buf, inverse=True, out_dtype=o.dtype))

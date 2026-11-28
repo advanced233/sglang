@@ -256,6 +256,11 @@ def _run_vllm_compare(args) -> None:
             cos = torch.nn.functional.cosine_similarity(
                 o_vllm.flatten(), o_sgl.flatten(), dim=0
             ).item()
+            ks_v_val = (ks_f.view(torch.int32) & -16).view(torch.float32)
+            ks_s_val = (d["k_scale"].view(torch.int32) & -16).view(torch.float32)
+            ks_max_rel = (
+                ((ks_v_val - ks_s_val).abs() / ks_s_val.clamp_min(1e-6)).max().item()
+            )
             return {
                 "vllm_hadacore": bool(vi4._hadacore_available()),
                 "k_byte_match_rate": (kc_f == d["k_buf"]).float().mean().item(),
@@ -272,6 +277,7 @@ def _run_vllm_compare(args) -> None:
                 .float()
                 .mean()
                 .item(),
+                "k_scale_max_rel_diff": ks_max_rel,
                 "k_max_nibble_diff": max(
                     ((kc_f & 0xF).int() - (d["k_buf"] & 0xF).int()).abs().max().item(),
                     (((kc_f >> 4) & 0xF).int() - ((d["k_buf"] >> 4) & 0xF).int())
@@ -285,10 +291,28 @@ def _run_vllm_compare(args) -> None:
         finally:
             vi4._HADACORE_AVAILABLE = orig_flag
 
+    rht_default = eval_rht_mode(force_triton_rht=False)
+    rht_triton = eval_rht_mode(force_triton_rht=True)
+    # Exact bit-parity holds for no-RHT and vLLM's Triton-MMA RHT (same fp32 Hadamard
+    # accumulation before bf16 cast). vLLM's default hadacore path rescales by 1/sqrt(d)
+    # inside bf16 and multiplies by sqrt(d) outside, introducing ~1 bf16 ULP (~0.5%) diff.
+    parity_ok = (
+        all(norht_exact.values())
+        and rht_triton["k_byte_match_rate"] == 1.0
+        and rht_triton["v_byte_match_rate"] == 1.0
+        and rht_triton["k_scale_bit_match_rate"] == 1.0
+        and rht_triton["v_scale_bit_match_rate"] == 1.0
+        and rht_triton["k_max_nibble_diff"] == 0
+        and rht_triton["attn_cos_sim"] >= 0.9999
+        and rht_default["k_byte_match_rate"] >= 0.95
+        and rht_default["v_byte_match_rate"] >= 0.95
+        and rht_default["attn_cos_sim"] >= 0.995
+    )
     res = {
+        "parity_ok": parity_ok,
         "norht_exact": norht_exact,
-        "rht_vllm_default": eval_rht_mode(force_triton_rht=False),
-        "rht_vllm_triton_mma": eval_rht_mode(force_triton_rht=True),
+        "rht_vllm_default": rht_default,
+        "rht_vllm_triton_mma": rht_triton,
     }
     print(json.dumps(res, indent=2))
 

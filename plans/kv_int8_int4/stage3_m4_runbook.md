@@ -44,6 +44,8 @@ python benchmark/kv_lowbit/m4_vllm_parity.py --gpu $GPU \
   2>&1 | tee "$OUT/vllm_parity.json"
 ```
 
+`vllm_parity.json` 门禁以输出字段 `parity_ok: true` 为准：`norht_exact` 全 `true`、`rht_vllm_triton_mma`（与我们相同的 fp32 Hadamard 累加路径）100% 逐位一致且 `attn_cos_sim >= 0.9999`；`rht_vllm_default` 在启用 `hadacore` 时因其在 bf16 内乘 `1/sqrt(d)`、外部再乘 `sqrt(d)` 存在约 1 bf16 ULP 舍入，预期 `k/v_byte_match_rate >= 0.95`、`attn_cos_sim >= 0.995`（不要求 `hadacore` 路径 `1.0`）。
+
 ## 2. Decode kernel 冷 L2 测速（与 BF16 / INT8 / vLLM INT4 对照，约 4 分钟）
 
 ```bash
