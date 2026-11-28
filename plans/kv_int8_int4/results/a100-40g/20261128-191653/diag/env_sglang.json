@@ -1,0 +1,10 @@
+{
+ "python": "$KVQ_WORK/envs/sglang/bin/python",
+ "torch_cuda": "13.0",
+ "torch": "2.14.1",
+ "triton": "3.8.0",
+ "vllm": null,
+ "sglang": "0.0.0.dev0",
+ "device": "NVIDIA A100-PCIE-40GB",
+ "sm_count": 108
+}

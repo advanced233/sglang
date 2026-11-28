@@ -1,0 +1,10 @@
+{
+ "python": "$KVQ_WORK/envs/vllm/bin/python",
+ "torch_cuda": "12.9",
+ "torch": "2.13.0+cu129",
+ "triton": "3.7.1",
+ "vllm": "0.32.0+cu129",
+ "sglang": null,
+ "device": "NVIDIA A100-PCIE-40GB",
+ "sm_count": 108
+}

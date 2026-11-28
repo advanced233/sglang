@@ -1,0 +1,25 @@
+# M4 运行记录
+
+- 代码提交 `70430d8`。
+- cpu_tests: 27 passed, 20 warnings in 54.17s
+- gpu_tests: 123 passed, 20 warnings in 108.15s (0:01:48)
+- triton_attn_test: 1 passed, 16 deselected, 20 warnings in 11.96s
+
+```text
+start=2026-11-28T19:17:00+08:00 code=70430d8d54142680955bf987fdfb2d508c77b46f
+cpu_exit=0
+gpu_busy=0 time=2026-11-28T19:17:59+08:00
+resumed_wait=2026-11-28T19:19:16+08:00 code=70430d8d54142680955bf987fdfb2d508c77b46f
+cpu_preserved=passed
+gpu_busy=0 time=2026-11-28T19:19:17+08:00
+gpu_busy=1 time=2026-11-28T19:29:17+08:00
+gpu_exit=0
+attention_exit=0
+parity_exit=0
+parity_gate=pass
+diag_exit=0
+serve_exit=0
+experiments_end=2026-11-28T19:50:35+08:00
+
+```
+
