@@ -28,7 +28,11 @@ def uses_fused_int8_kv(
     if quant_method is None:
         return False
     access = quant_method.resolve_attention_access(phase, "triton")
-    if access is None or access.kind != KVCacheAttentionAccessKind.FUSED_DEQUANT:
+    if (
+        access is None
+        or access.kind != KVCacheAttentionAccessKind.FUSED_DEQUANT
+        or access.scale_recipe != "int8_per_token_head"
+    ):
         return False
     # The kernels address KV by slot and have no DCP merge.
     if page_size != 1 or dcp_size > 1:

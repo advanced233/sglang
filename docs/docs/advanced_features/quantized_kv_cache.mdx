@@ -44,6 +44,15 @@ INT8 KV cache is currently experimental. It requires `--attention-backend triton
 - **`int8_per_token_head`**: Symmetric INT8 with one FP32 scale per token and KV head (absmax / 127), the same recipe as vLLM's `int8_per_token_head`. It works on GPUs without FP8 support, such as A100.
 - **Extend semantics**: By default, prefill/extend reads cached prefixes in INT8 while attending to the current chunk's K/V in unquantized BF16 (`chunk_bf16`). Because a cached prefix was quantized while a fresh prefill attends to it in BF16, `prefill_cache_hit` logprobs have a small non-zero KL divergence against fresh prefill. Pass `--enable-deterministic-inference` (or set `SGLANG_ENABLE_TRITON_INT8_UNIFIED_EXTEND=1`) to use the 1-stage unified INT8 extend kernel (`chunk_q`), which reads both prefix and current chunk back from the quantized cache for consistent cache-hit and prefill/decode numerics.
 
+### INT4 Per-Token-Head Format
+
+<Warning>
+INT4 KV cache is currently experimental. It requires `--attention-backend triton`, page size 1, even head dimensions, and MHA models. Both decode and prefill/extend read packed INT4 data and per-token scales directly in fused Triton attention kernels.
+</Warning>
+
+- **`int4_per_token_head`**: Asymmetric INT4 (two 4-bit nibbles per `uint8` byte) with Randomized Hadamard Transform (RHT, seed `0x9E3779B9`) and one FP32 scale per token and KV head (with the 4-bit zero-point embedded in the scale's low 4 mantissa bits), aligned with vLLM's `int4_per_token_head`. Scales are stored in separate aligned buffers, and RHT is fused into the store, decode, and extend kernels for power-of-two head dimensions (`32`, `64`, `128`).
+- **Extend semantics**: By default, prefill/extend reads cached prefixes in INT4 while attending to the current chunk in unquantized BF16 (`chunk_bf16`). Pass `--enable-deterministic-inference` (or set `SGLANG_ENABLE_TRITON_INT4_UNIFIED_EXTEND=1`) to use the 1-stage unified INT4 extend kernel (`chunk_q`) for bit-exact prefix-split invariance.
+
 ## Usage
 
 ### Enabling Quantized KV Cache

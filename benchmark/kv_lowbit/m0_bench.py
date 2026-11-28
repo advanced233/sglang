@@ -75,6 +75,10 @@ CONFIGS = {
         "sglang",
         ["--attention-backend", "triton", "--kv-cache-dtype", "int8_per_token_head"],
     ),
+    "sglang-int4-triton": (
+        "sglang",
+        ["--attention-backend", "triton", "--kv-cache-dtype", "int4_per_token_head"],
+    ),
     "vllm-bf16-triton": ("vllm", []),
     "vllm-int8-triton": ("vllm", ["--kv-cache-dtype", "int8_per_token_head"]),
     "vllm-int4-triton": ("vllm", ["--kv-cache-dtype", "int4_per_token_head"]),
@@ -89,12 +93,15 @@ GROUP_CONFIGS = {
     "vllm": ["vllm-bf16-triton", "vllm-int8-triton", "vllm-int4-triton"],
     # M3b: fused INT8 decode against BF16, both on Triton.
     "m3b": ["sglang-bf16-triton", "sglang-int8-triton"],
+    # M4: fused INT4 (+ RHT) against BF16, both on Triton.
+    "m4": ["sglang-bf16-triton", "sglang-int4-triton"],
 }
 # Main-group servers that also run the decode probe at their default pool size.
 DECODE_PROBE_CONFIGS = (
     "sglang-bf16-triton",
     "sglang-fp4mx-triton",
     "sglang-int8-triton",
+    "sglang-int4-triton",
 )
 # Extra servers for the pool group. Two FP4 points fix the slope of the
 # whole-layer dequant cost; BF16 reads only the used tokens, so one point does.

@@ -303,6 +303,10 @@ class TritonAttnBackend(AttentionBackend):
             # layer 0, which is not guaranteed to be a full-attention layer.
             self.v_head_dim = model_runner.token_to_kv_pool.get_v_head_dim()
             self.swa_v_head_dim = None
+        elif getattr(model_runner.token_to_kv_pool, "is_quantized_kv_cache", False):
+            # Avoid triggering a full-layer dequantization just to read v_head_dim.
+            self.v_head_dim = model_runner.token_to_kv_pool.get_v_head_dim()
+            self.swa_v_head_dim = None
         else:
             # Use start_layer instead of 0 to handle pipeline parallelism.
             # In PP, start_layer may be > 0, so layer 0 isn't in this stage's buffer.
@@ -372,6 +376,7 @@ class TritonAttnBackend(AttentionBackend):
             ) // self.split_tile_size
 
         self._init_int8_kv_reads()
+        self._init_int4_kv_reads()
 
         assert not (
             model_runner.sliding_window_size is not None
@@ -1663,6 +1668,45 @@ class TritonAttnBackend(AttentionBackend):
             forward_extend_unified_int8
         )
 
+    def _init_int4_kv_reads(self):
+        """Fused decode and extend reads for int4_per_token_head pools."""
+        from sglang.srt.layers.attention.triton_int4_kv import (
+            forward_decode_int4,
+            forward_extend_int4,
+            forward_extend_unified_int4,
+            uses_fused_int4_kv,
+            warm_int4_rht_caches,
+        )
+
+        quant_method = self.token_to_kv_pool.get_kv_cache_quant_method()
+        self.int4_fused_decode = uses_fused_int4_kv(
+            quant_method=quant_method,
+            phase="decode",
+            page_size=self.page_size,
+            dcp_size=self.dcp_size,
+        )
+        self.int4_fused_extend = uses_fused_int4_kv(
+            quant_method=quant_method,
+            phase="prefill",
+            page_size=self.page_size,
+            dcp_size=self.dcp_size,
+        )
+        self.int4_unified_extend = (
+            self.int4_fused_extend
+            and envs.SGLANG_ENABLE_TRITON_INT4_UNIFIED_EXTEND.get()
+        )
+        if self.int4_fused_decode or self.int4_fused_extend:
+            warm_int4_rht_caches(
+                head_dim=self.token_to_kv_pool.head_dim,
+                v_head_dim=self.token_to_kv_pool.v_head_dim,
+                device=self.device,
+            )
+        self.forward_decode_int4 = torch.compiler.disable(forward_decode_int4)
+        self.forward_extend_int4 = torch.compiler.disable(forward_extend_int4)
+        self.forward_extend_unified_int4 = torch.compiler.disable(
+            forward_extend_unified_int4
+        )
+
     def _set_kv_buffer(
         self,
         forward_batch: ForwardBatch,
@@ -1828,9 +1872,11 @@ class TritonAttnBackend(AttentionBackend):
                 q, k, v, layer, forward_batch, causal, logits_soft_cap, sinks
             )
 
-        # Deterministic mode (or opt-in unified INT8 extend): use unified 1-stage kernel
+        # Deterministic mode (or opt-in unified INT8/INT4 extend): use unified 1-stage kernel
         if self.enable_deterministic or (
-            self.int8_unified_extend and save_kv_cache and self.dllm_attention is None
+            (self.int8_unified_extend or self.int4_unified_extend)
+            and save_kv_cache
+            and self.dllm_attention is None
         ):
             return self._forward_extend_unified(
                 q,
@@ -1923,6 +1969,29 @@ class TritonAttnBackend(AttentionBackend):
 
         if self.int8_fused_extend and self.dllm_attention is None:
             self.forward_extend_int8(
+                pool=self.token_to_kv_pool,
+                layer=layer,
+                q=q,
+                k=k,
+                v=v,
+                o=o,
+                qo_indptr=self.forward_metadata.qo_indptr,
+                kv_indptr=kv_indptr,
+                kv_indices=kv_indices,
+                custom_mask=self.forward_metadata.custom_mask,
+                is_causal=causal,
+                mask_indptr=self.forward_metadata.mask_indptr,
+                max_len_extend=self.forward_metadata.max_extend_len,
+                logit_cap=logits_soft_cap,
+                sliding_window_size=sliding_window_size,
+                sinks=sinks,
+                window_kv_offsets=window_kv_offsets,
+                score_mod=score_mod,
+            )
+            return o
+
+        if self.int4_fused_extend and self.dllm_attention is None:
+            self.forward_extend_int4(
                 pool=self.token_to_kv_pool,
                 layer=layer,
                 q=q,
@@ -2337,6 +2406,28 @@ class TritonAttnBackend(AttentionBackend):
             )
             return o
 
+        if self.int4_fused_extend:
+            self.forward_extend_unified_int4(
+                pool=self.token_to_kv_pool,
+                layer=layer,
+                q=q,
+                o=o,
+                qo_indptr=self.forward_metadata.qo_indptr,
+                kv_indptr=unified_kv_indptr,
+                kv_indices=unified_kv_indices,
+                prefix_lens=prefix_lens,
+                max_len_extend=self.forward_metadata.max_extend_len,
+                custom_mask=self.forward_metadata.custom_mask,
+                mask_indptr=self.forward_metadata.mask_indptr,
+                logit_cap=logits_soft_cap,
+                is_causal=causal,
+                sliding_window_size=sliding_window_size,
+                sinks=sinks,
+                window_start_pos=window_start_pos,
+                score_mod=score_mod,
+            )
+            return o
+
         # Call unified kernel
         self.extend_attention_fwd_unified(
             q.view(-1, layer.tp_q_head_num, layer.qk_head_dim),
@@ -2469,6 +2560,27 @@ class TritonAttnBackend(AttentionBackend):
                     "int8_per_token_head decode does not support score_mod."
                 )
             self.forward_decode_int8(
+                pool=self.token_to_kv_pool,
+                layer=layer,
+                q=q,
+                o=o,
+                kv_indptr=kv_indptr,
+                kv_indices=kv_indices,
+                attn_logits=attn_logits,
+                attn_lse=self.forward_metadata.attn_lse,
+                num_kv_splits=self.forward_metadata.num_kv_splits,
+                max_kv_splits=self.max_kv_splits,
+                logit_cap=logits_soft_cap,
+                sinks=sinks,
+            )
+            return o
+
+        if self.int4_fused_decode:
+            if score_mod is not None:
+                raise NotImplementedError(
+                    "int4_per_token_head decode does not support score_mod."
+                )
+            self.forward_decode_int4(
                 pool=self.token_to_kv_pool,
                 layer=layer,
                 q=q,

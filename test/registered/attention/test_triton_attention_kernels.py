@@ -1537,6 +1537,223 @@ class TestTritonAttention(CustomTestCase):
         )
         torch.testing.assert_close(o_uni.float(), o_uni_ref, atol=5e-3, rtol=1e-2)
 
+    def test_int4_per_token_head_attention_paths(self):
+        """INT4 per-token-head fused paths: GQA decode, MHA decode, extend prefix, unified."""
+        if is_in_amd_ci() or not torch.cuda.is_available():
+            self.skipTest("INT4 per-token-head inline-asm path is CUDA-only")
+
+        from sglang.kernels.ops.attention.decode_attention_int4 import (
+            decode_attention_fwd_int4,
+        )
+        from sglang.kernels.ops.attention.extend_attention_int4 import (
+            extend_attention_fwd_int4,
+            extend_attention_fwd_unified_int4,
+        )
+        from sglang.kernels.ops.kvcache.int4_per_token_head import (
+            dequant_int4_per_token_head,
+            store_int4_per_token_head_kv,
+        )
+
+        self._set_all_seeds(0)
+        device = get_device()
+        dtype = torch.bfloat16
+
+        # 1. Decode: GQA grouped (32/8) and MHA (8/8)
+        for num_q_heads, num_kv_heads in ((32, 8), (8, 8)):
+            seq_lens = [17, 139]
+            total, batch, head_dim = sum(seq_lens), len(seq_lens), 128
+            k = 2 * torch.randn(
+                (total, num_kv_heads, head_dim), dtype=dtype, device=device
+            )
+            v = 2 * torch.randn(
+                (total, num_kv_heads, head_dim), dtype=dtype, device=device
+            )
+            q = torch.randn((batch, num_q_heads, head_dim), dtype=dtype, device=device)
+            slots = torch.randperm(total + 16, device=device)[:total] + 1
+            k_buf = torch.zeros(
+                (total + 17, num_kv_heads, head_dim // 2),
+                dtype=torch.uint8,
+                device=device,
+            )
+            v_buf = torch.zeros_like(k_buf)
+            k_scale = torch.zeros(
+                (total + 17, num_kv_heads), dtype=torch.float32, device=device
+            )
+            v_scale = torch.zeros_like(k_scale)
+            store_int4_per_token_head_kv(
+                k=k,
+                v=v,
+                loc=slots,
+                k_cache=k_buf,
+                v_cache=v_buf,
+                k_scale=k_scale,
+                v_scale=v_scale,
+            )
+            kv_indptr = torch.tensor(
+                [0, seq_lens[0], total], dtype=torch.int32, device=device
+            )
+            o = torch.empty_like(q)
+            sm_scale = head_dim**-0.5
+            decode_attention_fwd_int4(
+                q=q,
+                k_buffer=k_buf,
+                v_buffer=v_buf,
+                k_scale_buffer=k_scale,
+                v_scale_buffer=v_scale,
+                o=o,
+                kv_indptr=kv_indptr,
+                kv_indices=slots.to(torch.int32),
+                attn_logits=torch.empty(
+                    (batch, num_q_heads, 4, head_dim),
+                    dtype=torch.float32,
+                    device=device,
+                ),
+                attn_lse=torch.empty(
+                    (batch, num_q_heads, 4), dtype=torch.float32, device=device
+                ),
+                num_kv_splits=torch.tensor([2, 4], dtype=torch.int32, device=device),
+                max_kv_splits=4,
+                sm_scale=sm_scale,
+            )
+            k_dq = dequant_int4_per_token_head(
+                data=k_buf, scale=k_scale, dtype=torch.float32
+            )
+            v_dq = dequant_int4_per_token_head(
+                data=v_buf, scale=v_scale, dtype=torch.float32
+            )
+            ref = decode_attention_fwd_torch(
+                q, k_dq, v_dq, kv_indptr, slots.to(torch.int32), sm_scale
+            )
+            torch.testing.assert_close(o.float(), ref, atol=8e-3, rtol=1.5e-2)
+
+        # 2. Extend prefix (2-stage) and Unified (1-stage)
+        prefix_lens = [35, 96]
+        extend_lens = [21, 70]
+        head_dim, num_q_heads, num_kv_heads = 128, 32, 8
+        total = sum(prefix_lens) + sum(extend_lens)
+        k_all = 2 * torch.randn(
+            (total, num_kv_heads, head_dim), dtype=dtype, device=device
+        )
+        v_all = 2 * torch.randn(
+            (total, num_kv_heads, head_dim), dtype=dtype, device=device
+        )
+        q_ext = torch.randn(
+            (sum(extend_lens), num_q_heads, head_dim), dtype=dtype, device=device
+        )
+        slots = torch.randperm(total + 16, device=device)[:total] + 1
+        k_buf = torch.zeros(
+            (total + 17, num_kv_heads, head_dim // 2), dtype=torch.uint8, device=device
+        )
+        v_buf = torch.zeros_like(k_buf)
+        k_scale = torch.zeros(
+            (total + 17, num_kv_heads), dtype=torch.float32, device=device
+        )
+        v_scale = torch.zeros_like(k_scale)
+        store_int4_per_token_head_kv(
+            k=k_all,
+            v=v_all,
+            loc=slots,
+            k_cache=k_buf,
+            v_cache=v_buf,
+            k_scale=k_scale,
+            v_scale=v_scale,
+        )
+        p0, p1 = prefix_lens
+        e0, e1 = extend_lens
+        prefix_indices = torch.cat([slots[:p0], slots[p0 + e0 : p0 + e0 + p1]]).to(
+            torch.int32
+        )
+        extend_indices = torch.cat([slots[p0 : p0 + e0], slots[p0 + e0 + p1 :]]).to(
+            torch.int32
+        )
+        k_ext = torch.cat(
+            [k_all[p0 : p0 + e0], k_all[p0 + e0 + p1 :]], dim=0
+        ).contiguous()
+        v_ext = torch.cat(
+            [v_all[p0 : p0 + e0], v_all[p0 + e0 + p1 :]], dim=0
+        ).contiguous()
+        qo_indptr = torch.tensor([0, e0, e0 + e1], dtype=torch.int32, device=device)
+        prefix_indptr = torch.tensor([0, p0, p0 + p1], dtype=torch.int32, device=device)
+
+        o_reg = torch.empty_like(q_ext)
+        extend_attention_fwd_int4(
+            q_extend=q_ext,
+            k_extend=k_ext,
+            v_extend=v_ext,
+            o_extend=o_reg,
+            k_buffer=k_buf,
+            v_buffer=v_buf,
+            k_scale_buffer=k_scale,
+            v_scale_buffer=v_scale,
+            qo_indptr=qo_indptr,
+            kv_indptr=prefix_indptr,
+            kv_indices=prefix_indices,
+            custom_mask=None,
+            is_causal=True,
+            mask_indptr=None,
+            max_len_extend=max(extend_lens),
+            sm_scale=head_dim**-0.5,
+        )
+        k_dq = dequant_int4_per_token_head(
+            data=k_buf, scale=k_scale, dtype=torch.float32
+        )
+        v_dq = dequant_int4_per_token_head(
+            data=v_buf, scale=v_scale, dtype=torch.float32
+        )
+        o_reg_ref = torch.empty_like(q_ext, dtype=torch.float32)
+        extend_attention_fwd_torch(
+            q_ext.float(),
+            k_ext.float(),
+            v_ext.float(),
+            o_reg_ref,
+            k_dq,
+            v_dq,
+            qo_indptr,
+            prefix_indptr,
+            prefix_indices,
+            -1,
+        )
+        torch.testing.assert_close(o_reg.float(), o_reg_ref, atol=8e-3, rtol=1.5e-2)
+
+        uni_indptr, uni_indices, uni_prefix = build_unified_kv_indices(
+            prefix_indptr,
+            prefix_indices,
+            torch.tensor([0, e0], dtype=torch.int32, device=device),
+            torch.tensor(extend_lens, dtype=torch.int32, device=device),
+            extend_indices,
+            2,
+        )
+        o_uni = torch.empty_like(q_ext)
+        extend_attention_fwd_unified_int4(
+            q=q_ext,
+            o=o_uni,
+            k_buffer=k_buf,
+            v_buffer=v_buf,
+            k_scale_buffer=k_scale,
+            v_scale_buffer=v_scale,
+            qo_indptr=qo_indptr,
+            kv_indptr=uni_indptr,
+            kv_indices=uni_indices,
+            prefix_lens=uni_prefix.to(torch.int32),
+            max_len_extend=max(extend_lens),
+            sm_scale=head_dim**-0.5,
+            is_causal=True,
+        )
+        o_uni_ref = torch.empty_like(q_ext, dtype=torch.float32)
+        extend_attention_fwd_torch(
+            q_ext.float(),
+            k_dq[extend_indices],
+            v_dq[extend_indices],
+            o_uni_ref,
+            k_dq,
+            v_dq,
+            qo_indptr,
+            prefix_indptr,
+            prefix_indices,
+            -1,
+        )
+        torch.testing.assert_close(o_uni.float(), o_uni_ref, atol=8e-3, rtol=1.5e-2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -82,6 +82,7 @@ CONFIGS = {
     "sglang-bf16": Config(impl="sglang", kv="bf16"),
     "sglang-fp8e5m2": Config(impl="sglang", kv="fp8_e5m2"),
     "sglang-int8": Config(impl="sglang", kv="int8"),
+    "sglang-int4": Config(impl="sglang", kv="int4"),
     "vllm-bf16": Config(impl="vllm", kv="bf16"),
     "vllm-bf16-t32": Config(impl="vllm", kv="bf16", decode_tile=32),
     "vllm-int8": Config(impl="vllm", kv="int8"),
@@ -98,6 +99,7 @@ MAIN_KERNEL = {
     "ref": "reduce_kernel",
     "sglang": "_fwd_grouped_kernel_stage1",
     "sglang-int8": "_fwd_grouped_kernel_stage1_int8",
+    "sglang-int4": "_fwd_grouped_kernel_stage1_int4",
     "vllm": "kernel_unified_attention",
     "vllm-int4": "_attn_packed",
 }
@@ -111,6 +113,7 @@ INT8_SWEEP = {
     "max_kv_splits": (8, 16),
 }
 _INT8_VARIANT = re.compile(r"sglang-int8@(\w+)-n(\d+)-w(\d+)-s(\d+)-k(\d+)$")
+_INT4_VARIANT = re.compile(r"sglang-int4@(\w+)-n(\d+)-w(\d+)-s(\d+)-k(\d+)$")
 
 
 def int8_variant_name(cfg):
@@ -127,21 +130,22 @@ def int8_sweep_configs():
 
 
 def config_from_name(name):
-    """A CONFIGS entry, or an INT8 sweep variant named by int8_variant_name."""
+    """A CONFIGS entry, or an INT8/INT4 variant named by sglang-int{8,4}@..."""
     if name in CONFIGS:
         return CONFIGS[name]
-    m = _INT8_VARIANT.match(name)
-    if m is None:
-        raise SystemExit(f"unknown config {name!r}; choose from {list(CONFIGS)}")
-    return Config(
-        impl="sglang",
-        kv="int8",
-        convert=m[1],
-        block_n=int(m[2]),
-        num_warps=int(m[3]),
-        num_stages=int(m[4]),
-        max_kv_splits=int(m[5]),
-    )
+    for kv, pattern in (("int8", _INT8_VARIANT), ("int4", _INT4_VARIANT)):
+        m = pattern.match(name)
+        if m is not None:
+            return Config(
+                impl="sglang",
+                kv=kv,
+                convert=m[1],
+                block_n=int(m[2]),
+                num_warps=int(m[3]),
+                num_stages=int(m[4]),
+                max_kv_splits=int(m[5]),
+            )
+    raise SystemExit(f"unknown config {name!r}; choose from {list(CONFIGS)}")
 
 
 class Shape(msgspec.Struct, frozen=True, kw_only=True):
@@ -171,8 +175,8 @@ def kv_bytes(*, cfg, shape):
 def _main_kernel(cfg):
     if cfg.impl == "vllm" and cfg.kv == "int4":
         return MAIN_KERNEL["vllm-int4"]
-    if cfg.impl == "sglang" and cfg.kv == "int8":
-        return MAIN_KERNEL["sglang-int8"]
+    if cfg.impl == "sglang" and cfg.kv in ("int8", "int4"):
+        return MAIN_KERNEL[f"sglang-{cfg.kv}"]
     return MAIN_KERNEL[cfg.impl]
 
 
@@ -275,6 +279,8 @@ def _build_sglang(*, cfg, shape, q, k, v):
 
     if cfg.kv == "int8":
         return _build_sglang_int8(cfg=cfg, shape=shape, q=q, k=k, v=v)
+    if cfg.kv == "int4":
+        return _build_sglang_int4(cfg=cfg, shape=shape, q=q, k=k, v=v)
     dtype = torch.bfloat16 if cfg.kv == "bf16" else torch.float8_e5m2
     k_buf = torch.zeros(
         (shape.num_tokens + 1, shape.num_kv_heads, shape.head_dim),
@@ -340,6 +346,58 @@ def _build_sglang_int8(*, cfg, shape, q, k, v):
 
     def op():
         decode_attention_fwd_int8(
+            q=q,
+            k_buffer=k_buf,
+            v_buffer=v_buf,
+            k_scale_buffer=k_scale,
+            v_scale_buffer=v_scale,
+            o=out,
+            sm_scale=shape.head_dim**-0.5,
+            block_n=cfg.block_n,
+            num_warps=cfg.num_warps,
+            num_stages=cfg.num_stages,
+            convert=cfg.convert,
+            **meta,
+        )
+
+    splits = sorted(set(meta["num_kv_splits"].tolist()))
+    return op, out, {"kv_splits": splits}
+
+
+def _build_sglang_int4(*, cfg, shape, q, k, v):
+    import torch
+
+    from sglang.kernels.ops.attention.decode_attention_int4 import (
+        decode_attention_fwd_int4,
+    )
+    from sglang.kernels.ops.kvcache.int4_per_token_head import (
+        store_int4_per_token_head_kv,
+    )
+
+    def zeros(*size, dtype):
+        return torch.zeros(size, dtype=dtype, device=q.device)
+
+    slots, heads = shape.num_tokens + 1, shape.num_kv_heads
+    k_buf = zeros(slots, heads, shape.head_dim // 2, dtype=torch.uint8)
+    v_buf = zeros(slots, heads, shape.head_dim // 2, dtype=torch.uint8)
+    k_scale = zeros(slots, heads, dtype=torch.float32)
+    v_scale = zeros(slots, heads, dtype=torch.float32)
+    meta = _sglang_decode_metadata(
+        shape=shape, max_kv_splits=cfg.max_kv_splits, device=q.device
+    )
+    store_int4_per_token_head_kv(
+        k=k,
+        v=v,
+        loc=meta["kv_indices"],
+        k_cache=k_buf,
+        v_cache=v_buf,
+        k_scale=k_scale,
+        v_scale=v_scale,
+    )
+    out = torch.empty_like(q)
+
+    def op():
+        decode_attention_fwd_int4(
             q=q,
             k_buffer=k_buf,
             v_buffer=v_buf,
@@ -994,7 +1052,7 @@ def _timing_table(out, rows, peak_gbps):
 def _note_keys(row):
     if row["impl"] == "vllm":
         return ("decode_tile_used", "vllm_path", "layout")
-    if row["kv"] == "int8":
+    if row["kv"] in ("int8", "int4"):
         return ("kv_splits", "convert", "block_n", "num_warps", "num_stages")
     return ("kv_splits",)
 

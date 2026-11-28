@@ -26,10 +26,13 @@ if TYPE_CHECKING:
 _TRITON_KERNELS = [
     ("decode_attention", "decode_attention_fwd"),
     ("decode_attention_int8", "decode_attention_fwd_int8"),
+    ("decode_attention_int4", "decode_attention_fwd_int4"),
     ("extend_attention", "extend_attention_fwd"),
     ("extend_attention", "build_unified_kv_indices"),
     ("extend_attention_int8", "extend_attention_fwd_int8"),
     ("extend_attention_int8", "extend_attention_fwd_unified_int8"),
+    ("extend_attention_int4", "extend_attention_fwd_int4"),
+    ("extend_attention_int4", "extend_attention_fwd_unified_int4"),
     ("prefill_attention", "context_attention_fwd"),
     ("merge_state", "merge_state_triton"),
     ("suffix_attention_merge", "merge_suffix_attention_in_place"),
